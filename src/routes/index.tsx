@@ -89,6 +89,7 @@ function TalentFlowApp() {
   const [candidateRole, setCandidateRole] = useState("");
   const [interviewNotes, setInterviewNotes] = useState("");
   const [draftName, setDraftName] = useState("");
+  const [draftRole, setDraftRole] = useState("");
   const [status, setStatus] = useState<CandidateStatus>("Next Stage");
   const [tone, setTone] = useState<MessageTone>("Empathetic");
   const [candidateNotes, setCandidateNotes] = useState("");
