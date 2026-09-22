@@ -374,6 +374,16 @@ function TalentFlowApp() {
                       className="bg-surface-quiet"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="draft-role">Role Title</Label>
+                    <Input
+                      id="draft-role"
+                      value={draftRole}
+                      onChange={(event) => setDraftRole(event.target.value)}
+                      placeholder="Senior Frontend Engineer"
+                      className="bg-surface-quiet"
+                    />
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Status</Label>
