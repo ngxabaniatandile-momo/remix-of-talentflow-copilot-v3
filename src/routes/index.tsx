@@ -10,8 +10,9 @@ import {
   ShieldCheck,
   Sparkles,
   UserCheck,
+  type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -87,6 +88,8 @@ export const Route = createFileRoute("/")({
         content:
           "Automate HR workflows with role frameworks, objective scorecards, candidate communications, and built-in safeguards.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: TalentFlowApp,
@@ -101,7 +104,7 @@ function TalentFlowApp() {
   const [status, setStatus] = useState<CandidateStatus>("Next Stage");
   const [tone, setTone] = useState<MessageTone>("Empathetic");
   const [candidateNotes, setCandidateNotes] = useState("");
-  const [reviewed, setReviewed] = useState<Record<string, boolean>>({
+  const [reviewed, setReviewed] = useState<Record<"benchmark" | "scorecard" | "drafter", boolean>>({
     benchmark: false,
     scorecard: false,
     drafter: false,
@@ -466,9 +469,9 @@ function OutputCard({
   children,
 }: {
   title: string;
-  icon: typeof BrainCircuit;
+  icon: LucideIcon;
   copyText: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <Card className="rounded-lg border-border bg-card shadow-sm">
