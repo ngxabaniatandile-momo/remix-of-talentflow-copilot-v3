@@ -453,7 +453,7 @@ function TalentFlowApp() {
                   <GeneratedOutput
                     markdown={emailMarkdown}
                     loading={emailLoading}
-                    emptyState="Add the candidate, status, tone and notes, then select Generate Email to draft a tailored, bias-screened message."
+                    emptyState="Add the candidate, role, status, tone and notes, then select Draft Communication to write a tailored, bias-screened message."
                   />
                 </OutputCard>
 
