@@ -429,13 +429,14 @@ function TalentFlowApp() {
                       ) : (
                         <Mail aria-hidden="true" className="size-4" />
                       )}
-                      {emailLoading ? "Generating…" : "Generate Email"}
+                      {emailLoading ? "Drafting…" : "Draft Communication"}
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() => {
                         setDraftName("Avery Patel");
+                        setDraftRole("Senior Frontend Engineer");
                         setStatus("Next Stage");
                         setTone("Empathetic");
                         setCandidateNotes(communicationSample);
