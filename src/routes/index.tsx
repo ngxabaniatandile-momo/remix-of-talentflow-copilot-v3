@@ -131,6 +131,7 @@ function TalentFlowApp() {
       const result = await generateCandidateEmail({
         data: {
           candidateName: draftName || "Candidate",
+          roleTitle: draftRole || "the role",
           status,
           tone,
           notes: candidateNotes,
