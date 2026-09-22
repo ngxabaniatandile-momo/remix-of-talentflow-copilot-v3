@@ -1,0 +1,630 @@
+import { createFileRoute } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  BrainCircuit,
+  CheckCircle2,
+  Clipboard,
+  FileText,
+  Mail,
+  Scale,
+  ShieldCheck,
+  Sparkles,
+  UserCheck,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+
+type CandidateStatus = "Offer" | "Rejection" | "Next Stage";
+type MessageTone = "Empathetic" | "Direct" | "Executive";
+
+const roleSample = `Senior People Operations Partner
+
+Own workforce planning rhythms for a 600-person product organization. Partner with finance and hiring managers to benchmark role levels, identify compensation bands, and translate business needs into equitable role expectations. Lead quarterly calibration sessions, improve promotion documentation, and maintain consistent interview rubrics across distributed teams.`;
+
+const notesSample = `Avery described building a weekly hiring health dashboard after noticing recruiters were using three separate spreadsheets. They partnered with analytics to standardize funnel definitions, trained hiring managers on evidence-based debriefs, and reduced time-to-slate by 18% over two quarters.
+
+In the role-play, Avery asked clarifying questions before recommending process changes. They missed one edge case around regional approvals but quickly acknowledged it and proposed a compliance review step. Feedback style was calm, structured, and specific.`;
+
+const communicationSample = `Panel was impressed by Avery's structured thinking, evidence-based process improvements, and stakeholder management. Please mention the next conversation will focus on compensation strategy and change management with the VP of People.`;
+
+const competencyBank = [
+  "Role architecture and leveling clarity",
+  "Evidence-based decision making",
+  "Cross-functional stakeholder management",
+  "Operational process design",
+  "Equitable communication and calibration",
+  "Change management under ambiguity",
+];
+
+const evidenceRows = [
+  {
+    competency: "Operational judgment",
+    evidence: "Standardized funnel definitions and reduced time-to-slate by 18%.",
+    signal: "Strong",
+  },
+  {
+    competency: "Stakeholder collaboration",
+    evidence: "Partnered with analytics and trained hiring managers on evidence-based debriefs.",
+    signal: "Strong",
+  },
+  {
+    competency: "Risk awareness",
+    evidence: "Missed regional approval edge case, then added a compliance review step.",
+    signal: "Developing",
+  },
+];
+
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "TalentFlow: AI Workplace Productivity Copilot" },
+      {
+        name: "description",
+        content:
+          "An interactive HR productivity copilot for role benchmarking, interview scorecards, candidate emails, and responsible AI review.",
+      },
+      { property: "og:title", content: "TalentFlow: AI Workplace Productivity Copilot" },
+      {
+        property: "og:description",
+        content:
+          "Automate HR workflows with role frameworks, objective scorecards, candidate communications, and built-in safeguards.",
+      },
+    ],
+  }),
+  component: TalentFlowApp,
+});
+
+function TalentFlowApp() {
+  const [jobDescription, setJobDescription] = useState("");
+  const [candidateName, setCandidateName] = useState("");
+  const [candidateRole, setCandidateRole] = useState("");
+  const [interviewNotes, setInterviewNotes] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [status, setStatus] = useState<CandidateStatus>("Next Stage");
+  const [tone, setTone] = useState<MessageTone>("Empathetic");
+  const [candidateNotes, setCandidateNotes] = useState("");
+  const [reviewed, setReviewed] = useState<Record<string, boolean>>({
+    benchmark: false,
+    scorecard: false,
+    drafter: false,
+  });
+
+  const framework = useMemo(() => createFramework(jobDescription), [jobDescription]);
+  const scorecard = useMemo(
+    () => createScorecard(candidateName, candidateRole, interviewNotes),
+    [candidateName, candidateRole, interviewNotes],
+  );
+  const emailDraft = useMemo(
+    () => createEmailDraft(draftName, status, tone, candidateNotes),
+    [draftName, status, tone, candidateNotes],
+  );
+
+  const setReview = (key: string, checked: boolean | "indeterminate") => {
+    setReviewed((current) => ({ ...current, [key]: checked === true }));
+  };
+
+  return (
+    <main className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="flex items-start gap-3">
+            <div className="grid size-11 shrink-0 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+              <BrainCircuit aria-hidden="true" className="size-5" />
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold tracking-normal text-brand-ink sm:text-2xl">
+                TalentFlow
+              </h1>
+              <p className="text-sm font-medium text-muted-foreground">
+                AI Workplace Productivity Copilot
+              </p>
+            </div>
+          </div>
+          <Badge className="w-fit gap-2 border-alert-border bg-alert px-3 py-1.5 text-alert-foreground hover:bg-alert">
+            <ShieldCheck aria-hidden="true" className="size-4" />✓ Guardrails Active: PII & Bias Filter
+          </Badge>
+        </div>
+      </header>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-7 grid gap-4 lg:grid-cols-[1.4fr_0.6fr] lg:items-end">
+          <div>
+            <p className="mb-2 text-sm font-semibold uppercase tracking-normal text-primary">
+              HR operations workspace
+            </p>
+            <h2 className="max-w-3xl text-3xl font-extrabold tracking-normal text-foreground sm:text-4xl">
+              Turn messy hiring inputs into structured, review-ready decisions.
+            </h2>
+          </div>
+          <div className="grid grid-cols-3 gap-2 rounded-lg border border-border bg-card p-2 shadow-sm">
+            <Metric label="Workflows" value="3" />
+            <Metric label="Bias checks" value="Auto" />
+            <Metric label="Review" value="Required" />
+          </div>
+        </div>
+
+        <Tabs defaultValue="benchmark" className="w-full">
+          <div className="mb-6 flex justify-center">
+            <TabsList className="h-auto w-full max-w-3xl flex-col gap-1 rounded-lg border border-border bg-card p-1 shadow-sm sm:grid sm:grid-cols-3">
+              <TabsTrigger value="benchmark" className="w-full gap-2 py-2.5">
+                <Scale aria-hidden="true" className="size-4" />
+                Role Bench marker
+              </TabsTrigger>
+              <TabsTrigger value="scorecard" className="w-full gap-2 py-2.5">
+                <FileText aria-hidden="true" className="size-4" />
+                Interview Scorecard
+              </TabsTrigger>
+              <TabsTrigger value="drafter" className="w-full gap-2 py-2.5">
+                <Mail aria-hidden="true" className="size-4" />
+                Candidate Drafter
+              </TabsTrigger>
+            </TabsList>
+          </div>
+
+          <TabsContent value="benchmark">
+            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+              <Card className="rounded-lg border-border bg-card shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Scale aria-hidden="true" className="size-5 text-primary" /> Role benchmark input
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="job-description">Job Description</Label>
+                    <Textarea
+                      id="job-description"
+                      value={jobDescription}
+                      onChange={(event) => setJobDescription(event.target.value)}
+                      placeholder="Paste a job description or role brief."
+                      className="min-h-72 resize-none bg-surface-quiet"
+                    />
+                  </div>
+                  <Button type="button" variant="secondary" onClick={() => setJobDescription(roleSample)}>
+                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-5">
+                <OutputCard title="Competency Framework" icon={BrainCircuit} copyText={framework.copyText}>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {framework.competencies.map((item) => (
+                      <div key={item.title} className="rounded-lg border border-border bg-surface-quiet p-4">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <h3 className="font-semibold text-foreground">{item.title}</h3>
+                          <Badge variant="outline" className="border-border text-muted-foreground">
+                            {item.weight}
+                          </Badge>
+                        </div>
+                        <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </OutputCard>
+
+                <OutputCard title="3 Behavioral Questions" icon={UserCheck} copyText={framework.questions.join("\n")}>
+                  <ol className="space-y-3">
+                    {framework.questions.map((question, index) => (
+                      <li key={question} className="flex gap-3 rounded-lg bg-surface-panel p-4 text-sm leading-6">
+                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
+                          {index + 1}
+                        </span>
+                        <span>{question}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </OutputCard>
+
+                <EthicalSafeguardCard
+                  checked={reviewed.benchmark}
+                  onCheckedChange={(checked) => setReview("benchmark", checked)}
+                  findings="Role criteria normalized to skills, evidence, and business outcomes. Protected-class language not detected."
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="scorecard">
+            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+              <Card className="rounded-lg border-border bg-card shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileText aria-hidden="true" className="size-5 text-primary" /> Interview notes input
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="candidate-name">Candidate Name</Label>
+                      <Input
+                        id="candidate-name"
+                        value={candidateName}
+                        onChange={(event) => setCandidateName(event.target.value)}
+                        placeholder="Avery Patel"
+                        className="bg-surface-quiet"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="candidate-role">Role</Label>
+                      <Input
+                        id="candidate-role"
+                        value={candidateRole}
+                        onChange={(event) => setCandidateRole(event.target.value)}
+                        placeholder="People Operations Partner"
+                        className="bg-surface-quiet"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="interview-notes">Raw Interview Notes</Label>
+                    <Textarea
+                      id="interview-notes"
+                      value={interviewNotes}
+                      onChange={(event) => setInterviewNotes(event.target.value)}
+                      placeholder="Paste unstructured interviewer notes, observations, and panel feedback."
+                      className="min-h-72 resize-none bg-surface-quiet"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setCandidateName("Avery Patel");
+                      setCandidateRole("Senior People Operations Partner");
+                      setInterviewNotes(notesSample);
+                    }}
+                  >
+                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-5">
+                <OutputCard title="Executive Summary" icon={Clipboard} copyText={scorecard.summary}>
+                  <p className="rounded-lg bg-surface-panel p-4 text-sm leading-6 text-foreground">
+                    {scorecard.summary}
+                  </p>
+                </OutputCard>
+
+                <OutputCard title="Evidence Matrix" icon={Scale} copyText={scorecard.matrixCopy}>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Competency</TableHead>
+                        <TableHead>Evidence</TableHead>
+                        <TableHead>Signal</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {scorecard.rows.map((row) => (
+                        <TableRow key={row.competency}>
+                          <TableCell className="font-medium">{row.competency}</TableCell>
+                          <TableCell className="text-muted-foreground">{row.evidence}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                row.signal === "Developing"
+                                  ? "border-alert-border bg-alert text-alert-foreground hover:bg-alert"
+                                  : "border-transparent bg-accent text-accent-foreground hover:bg-accent"
+                              }
+                            >
+                              {row.signal}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </OutputCard>
+
+                <OutputCard title="Action Recommendation" icon={CheckCircle2} copyText={scorecard.recommendation}>
+                  <div className="rounded-lg border border-border bg-surface-quiet p-4">
+                    <p className="font-semibold text-foreground">{scorecard.recommendation}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      Calibrate with the panel before final decisioning and verify the compliance edge case with a role owner.
+                    </p>
+                  </div>
+                </OutputCard>
+
+                <EthicalSafeguardCard
+                  checked={reviewed.scorecard}
+                  onCheckedChange={(checked) => setReview("scorecard", checked)}
+                  findings="Evaluation language anchored to observable behavior. Personal identifiers minimized and unsupported sentiment removed."
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="drafter">
+            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
+              <Card className="rounded-lg border-border bg-card shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Mail aria-hidden="true" className="size-5 text-primary" /> Candidate communication input
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="draft-name">Candidate Name</Label>
+                    <Input
+                      id="draft-name"
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      placeholder="Avery Patel"
+                      className="bg-surface-quiet"
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select value={status} onValueChange={(value: CandidateStatus) => setStatus(value)}>
+                        <SelectTrigger className="bg-surface-quiet">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Offer">Offer</SelectItem>
+                          <SelectItem value="Rejection">Rejection</SelectItem>
+                          <SelectItem value="Next Stage">Next Stage</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Tone</Label>
+                      <Select value={tone} onValueChange={(value: MessageTone) => setTone(value)}>
+                        <SelectTrigger className="bg-surface-quiet">
+                          <SelectValue placeholder="Select tone" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Empathetic">Empathetic</SelectItem>
+                          <SelectItem value="Direct">Direct</SelectItem>
+                          <SelectItem value="Executive">Executive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="candidate-notes">Notes</Label>
+                    <Textarea
+                      id="candidate-notes"
+                      value={candidateNotes}
+                      onChange={(event) => setCandidateNotes(event.target.value)}
+                      placeholder="Add panel notes, next steps, timing, or feedback to include."
+                      className="min-h-56 resize-none bg-surface-quiet"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => {
+                      setDraftName("Avery Patel");
+                      setStatus("Next Stage");
+                      setTone("Empathetic");
+                      setCandidateNotes(communicationSample);
+                    }}
+                  >
+                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-5">
+                <OutputCard title="Email Draft" icon={Mail} copyText={emailDraft.copyText}>
+                  <div className="rounded-lg border border-border bg-surface-quiet p-5">
+                    <p className="text-sm font-semibold text-muted-foreground">Subject</p>
+                    <p className="mt-1 font-semibold text-foreground">{emailDraft.subject}</p>
+                    <Separator className="my-4" />
+                    <div className="whitespace-pre-line text-sm leading-7 text-foreground">{emailDraft.body}</div>
+                  </div>
+                </OutputCard>
+
+                <EthicalSafeguardCard
+                  checked={reviewed.drafter}
+                  onCheckedChange={(checked) => setReview("drafter", checked)}
+                  findings="Message avoids demographic assumptions, keeps feedback job-related, and flags final language for human approval."
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </section>
+    </main>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-surface-panel px-3 py-3 text-center">
+      <p className="text-base font-extrabold text-foreground">{value}</p>
+      <p className="mt-1 text-xs font-medium text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function OutputCard({
+  title,
+  icon: Icon,
+  copyText,
+  children,
+}: {
+  title: string;
+  icon: typeof BrainCircuit;
+  copyText: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="rounded-lg border-border bg-card shadow-sm">
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Icon aria-hidden="true" className="size-5 text-primary" /> {title}
+        </CardTitle>
+        <Button type="button" variant="outline" size="sm" onClick={() => copyToClipboard(copyText)}>
+          <Clipboard aria-hidden="true" className="size-4" /> Copy to Clipboard
+        </Button>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+function EthicalSafeguardCard({
+  checked,
+  onCheckedChange,
+  findings,
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean | "indeterminate") => void;
+  findings: string;
+}) {
+  return (
+    <Card className="rounded-lg border-alert-border bg-alert shadow-sm">
+      <CardContent className="p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-card text-alert-foreground">
+              <AlertTriangle aria-hidden="true" className="size-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-alert-foreground">Ethical Safeguard Card</h3>
+              <p className="mt-1 text-sm leading-6 text-alert-foreground">{findings}</p>
+            </div>
+          </div>
+          <Badge className="w-fit border-transparent bg-card text-alert-foreground hover:bg-card">
+            Bias-check indicator: Passed
+          </Badge>
+        </div>
+        <Separator className="my-4 bg-alert-border" />
+        <div className="flex items-start gap-3">
+          <Checkbox id={`human-review-${findings}`} checked={checked} onCheckedChange={onCheckedChange} />
+          <Label htmlFor={`human-review-${findings}`} className="leading-6 text-alert-foreground">
+            Mandatory human review completed before use
+          </Label>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function createFramework(jobDescription: string) {
+  const hasInput = jobDescription.trim().length > 0;
+  const selected = hasInput ? competencyBank.slice(0, 4) : competencyBank.slice(1, 5);
+  const competencies = selected.map((title, index) => ({
+    title,
+    weight: `${30 - index * 5}%`,
+    description: hasInput
+      ? `Assess for observable examples tied to ${title.toLowerCase()} in the submitted role scope.`
+      : `Ready to tailor this competency once a job description is added or sample data is loaded.`,
+  }));
+  const questions = [
+    "Tell me about a time you converted an ambiguous people-process problem into a clear operating rhythm. What evidence showed it worked?",
+    "Describe how you have handled calibration when stakeholders disagreed on role level, scope, or performance expectations.",
+    "Share an example of improving an HR workflow while protecting fairness, documentation quality, and candidate experience.",
+  ];
+
+  return {
+    competencies,
+    questions,
+    copyText: [
+      "Competency Framework",
+      ...competencies.map((item) => `${item.title} — ${item.weight}: ${item.description}`),
+      "",
+      "Behavioral Questions",
+      ...questions.map((question, index) => `${index + 1}. ${question}`),
+    ].join("\n"),
+  };
+}
+
+function createScorecard(candidateName: string, role: string, notes: string) {
+  const name = candidateName.trim() || "Candidate";
+  const targetRole = role.trim() || "the target role";
+  const hasNotes = notes.trim().length > 0;
+  const rows = hasNotes
+    ? evidenceRows
+    : evidenceRows.map((row) => ({
+        ...row,
+        evidence: "Awaiting interview notes or sample data to anchor this signal.",
+        signal: "Pending",
+      }));
+  const summary = hasNotes
+    ? `${name} shows strong fit for ${targetRole}, with clear evidence of operational rigor, structured collaboration, and measurable process improvement. The main follow-up area is risk coverage for regional approval and compliance nuances.`
+    : `Add raw interview notes to generate an objective summary for ${name} against ${targetRole}.`;
+  const recommendation = hasNotes
+    ? "Advance with focused follow-up on compliance judgment."
+    : "Pending evidence review.";
+
+  return {
+    summary,
+    rows,
+    recommendation,
+    matrixCopy: rows
+      .map((row) => `${row.competency}: ${row.signal} — ${row.evidence}`)
+      .join("\n"),
+  };
+}
+
+function createEmailDraft(
+  candidateName: string,
+  status: CandidateStatus,
+  tone: MessageTone,
+  notes: string,
+) {
+  const name = candidateName.trim() || "Candidate";
+  const context = notes.trim() || "Thank you for the time and thoughtful conversations with our team.";
+  const subjectByStatus: Record<CandidateStatus, string> = {
+    Offer: `Next steps for your offer, ${name}`,
+    Rejection: `Thank you for your time, ${name}`,
+    "Next Stage": `Next interview step for TalentFlow, ${name}`,
+  };
+  const openerByTone: Record<MessageTone, string> = {
+    Empathetic: `Hi ${name},\n\nThank you again for the care and time you invested in the process.`,
+    Direct: `Hi ${name},\n\nThank you for speaking with the team.`,
+    Executive: `Hi ${name},\n\nThank you for a thoughtful and productive interview process.`,
+  };
+  const decisionByStatus: Record<CandidateStatus, string> = {
+    Offer:
+      "We are excited to move forward with an offer. The team saw strong alignment between your experience and the outcomes needed in the role.",
+    Rejection:
+      "After careful review, we will not be moving forward at this time. This decision was based on role-specific evidence from the process.",
+    "Next Stage":
+      "We would like to invite you to the next stage. The next conversation will focus on the role-specific areas the panel wants to explore further.",
+  };
+  const body = `${openerByTone[tone]}\n\n${decisionByStatus[status]}\n\n${context}\n\nPlease reply with any questions or scheduling constraints, and we will make sure the next step is clear.\n\nBest,\nTalentFlow Recruiting Team`;
+
+  return {
+    subject: subjectByStatus[status],
+    body,
+    copyText: `Subject: ${subjectByStatus[status]}\n\n${body}`,
+  };
+}
+
+async function copyToClipboard(text: string) {
+  if (typeof navigator === "undefined" || !navigator.clipboard) {
+    toast.error("Clipboard is not available in this preview.");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard");
+  } catch {
+    toast.error("Could not copy to clipboard");
+  }
+}
