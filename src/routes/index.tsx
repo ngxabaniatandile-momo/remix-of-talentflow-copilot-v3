@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BrainCircuit,
-  CheckCircle2,
   Clipboard,
   FileText,
+  Loader2,
   Mail,
   Scale,
   ShieldCheck,
@@ -29,7 +29,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { MarkdownView } from "@/components/markdown-view";
+import { generateCandidateEmail, generateScorecard } from "@/lib/talentflow.functions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -55,23 +56,10 @@ const competencyBank = [
   "Change management under ambiguity",
 ];
 
-const evidenceRows = [
-  {
-    competency: "Operational judgment",
-    evidence: "Standardized funnel definitions and reduced time-to-slate by 18%.",
-    signal: "Strong",
-  },
-  {
-    competency: "Stakeholder collaboration",
-    evidence: "Partnered with analytics and trained hiring managers on evidence-based debriefs.",
-    signal: "Strong",
-  },
-  {
-    competency: "Risk awareness",
-    evidence: "Missed regional approval edge case, then added a compliance review step.",
-    signal: "Developing",
-  },
-];
+function errorMessage(error: unknown) {
+  if (error instanceof Error && error.message) return error.message;
+  return "Something went wrong while generating. Please try again.";
+}
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -110,15 +98,51 @@ function TalentFlowApp() {
     drafter: false,
   });
 
+  const [scorecardMarkdown, setScorecardMarkdown] = useState("");
+  const [scorecardLoading, setScorecardLoading] = useState(false);
+  const [emailMarkdown, setEmailMarkdown] = useState("");
+  const [emailLoading, setEmailLoading] = useState(false);
+
   const framework = useMemo(() => createFramework(jobDescription), [jobDescription]);
-  const scorecard = useMemo(
-    () => createScorecard(candidateName, candidateRole, interviewNotes),
-    [candidateName, candidateRole, interviewNotes],
-  );
-  const emailDraft = useMemo(
-    () => createEmailDraft(draftName, status, tone, candidateNotes),
-    [draftName, status, tone, candidateNotes],
-  );
+
+  const handleGenerateScorecard = async () => {
+    setScorecardLoading(true);
+    try {
+      const result = await generateScorecard({
+        data: {
+          candidateName: candidateName || "Candidate",
+          roleTitle: candidateRole,
+          rawNotes: interviewNotes,
+        },
+      });
+      setScorecardMarkdown(result.markdown);
+      toast.success("Scorecard generated");
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setScorecardLoading(false);
+    }
+  };
+
+  const handleGenerateEmail = async () => {
+    setEmailLoading(true);
+    try {
+      const result = await generateCandidateEmail({
+        data: {
+          candidateName: draftName || "Candidate",
+          status,
+          tone,
+          notes: candidateNotes,
+        },
+      });
+      setEmailMarkdown(result.markdown);
+      toast.success("Email draft generated");
+    } catch (error) {
+      toast.error(errorMessage(error));
+    } finally {
+      setEmailLoading(false);
+    }
+  };
 
   const setReview = (key: string, checked: boolean | "indeterminate") => {
     setReviewed((current) => ({ ...current, [key]: checked === true }));
@@ -287,65 +311,37 @@ function TalentFlowApp() {
                       className="min-h-72 resize-none bg-surface-quiet"
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      setCandidateName("Avery Patel");
-                      setCandidateRole("Senior People Operations Partner");
-                      setInterviewNotes(notesSample);
-                    }}
-                  >
-                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={handleGenerateScorecard} disabled={scorecardLoading}>
+                      {scorecardLoading ? (
+                        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                      ) : (
+                        <FileText aria-hidden="true" className="size-4" />
+                      )}
+                      {scorecardLoading ? "Generating…" : "Generate Scorecard"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setCandidateName("Avery Patel");
+                        setCandidateRole("Senior People Operations Partner");
+                        setInterviewNotes(notesSample);
+                      }}
+                    >
+                      <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
               <div className="space-y-5">
-                <OutputCard title="Executive Summary" icon={Clipboard} copyText={scorecard.summary}>
-                  <p className="rounded-lg bg-surface-panel p-4 text-sm leading-6 text-foreground">
-                    {scorecard.summary}
-                  </p>
-                </OutputCard>
-
-                <OutputCard title="Evidence Matrix" icon={Scale} copyText={scorecard.matrixCopy}>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Competency</TableHead>
-                        <TableHead>Evidence</TableHead>
-                        <TableHead>Signal</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {scorecard.rows.map((row) => (
-                        <TableRow key={row.competency}>
-                          <TableCell className="font-medium">{row.competency}</TableCell>
-                          <TableCell className="text-muted-foreground">{row.evidence}</TableCell>
-                          <TableCell>
-                            <Badge
-                              className={
-                                row.signal === "Developing"
-                                  ? "border-alert-border bg-alert text-alert-foreground hover:bg-alert"
-                                  : "border-transparent bg-accent text-accent-foreground hover:bg-accent"
-                              }
-                            >
-                              {row.signal}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </OutputCard>
-
-                <OutputCard title="Action Recommendation" icon={CheckCircle2} copyText={scorecard.recommendation}>
-                  <div className="rounded-lg border border-border bg-surface-quiet p-4">
-                    <p className="font-semibold text-foreground">{scorecard.recommendation}</p>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      Calibrate with the panel before final decisioning and verify the compliance edge case with a role owner.
-                    </p>
-                  </div>
+                <OutputCard title="Candidate Assessment Scorecard" icon={Clipboard} copyText={scorecardMarkdown}>
+                  <GeneratedOutput
+                    markdown={scorecardMarkdown}
+                    loading={scorecardLoading}
+                    emptyState="Add the candidate, role and raw interview notes, then select Generate Scorecard for an evidence-only assessment."
+                  />
                 </OutputCard>
 
                 <EthicalSafeguardCard
@@ -414,29 +410,38 @@ function TalentFlowApp() {
                       className="min-h-56 resize-none bg-surface-quiet"
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => {
-                      setDraftName("Avery Patel");
-                      setStatus("Next Stage");
-                      setTone("Empathetic");
-                      setCandidateNotes(communicationSample);
-                    }}
-                  >
-                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
-                  </Button>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" onClick={handleGenerateEmail} disabled={emailLoading}>
+                      {emailLoading ? (
+                        <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                      ) : (
+                        <Mail aria-hidden="true" className="size-4" />
+                      )}
+                      {emailLoading ? "Generating…" : "Generate Email"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        setDraftName("Avery Patel");
+                        setStatus("Next Stage");
+                        setTone("Empathetic");
+                        setCandidateNotes(communicationSample);
+                      }}
+                    >
+                      <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
 
               <div className="space-y-5">
-                <OutputCard title="Email Draft" icon={Mail} copyText={emailDraft.copyText}>
-                  <div className="rounded-lg border border-border bg-surface-quiet p-5">
-                    <p className="text-sm font-semibold text-muted-foreground">Subject</p>
-                    <p className="mt-1 font-semibold text-foreground">{emailDraft.subject}</p>
-                    <Separator className="my-4" />
-                    <div className="whitespace-pre-line text-sm leading-7 text-foreground">{emailDraft.body}</div>
-                  </div>
+                <OutputCard title="Email Draft" icon={Mail} copyText={emailMarkdown}>
+                  <GeneratedOutput
+                    markdown={emailMarkdown}
+                    loading={emailLoading}
+                    emptyState="Add the candidate, status, tone and notes, then select Generate Email to draft a tailored, bias-screened message."
+                  />
                 </OutputCard>
 
                 <EthicalSafeguardCard
@@ -555,67 +560,37 @@ function createFramework(jobDescription: string) {
   };
 }
 
-function createScorecard(candidateName: string, role: string, notes: string) {
-  const name = candidateName.trim() || "Candidate";
-  const targetRole = role.trim() || "the target role";
-  const hasNotes = notes.trim().length > 0;
-  const rows = hasNotes
-    ? evidenceRows
-    : evidenceRows.map((row) => ({
-        ...row,
-        evidence: "Awaiting interview notes or sample data to anchor this signal.",
-        signal: "Pending",
-      }));
-  const summary = hasNotes
-    ? `${name} shows strong fit for ${targetRole}, with clear evidence of operational rigor, structured collaboration, and measurable process improvement. The main follow-up area is risk coverage for regional approval and compliance nuances.`
-    : `Add raw interview notes to generate an objective summary for ${name} against ${targetRole}.`;
-  const recommendation = hasNotes
-    ? "Advance with focused follow-up on compliance judgment."
-    : "Pending evidence review.";
+function GeneratedOutput({
+  markdown,
+  loading,
+  emptyState,
+}: {
+  markdown: string;
+  loading: boolean;
+  emptyState: string;
+}) {
+  if (loading) {
+    return (
+      <div className="flex items-center gap-3 rounded-lg bg-surface-panel p-5 text-sm text-muted-foreground">
+        <Loader2 aria-hidden="true" className="size-4 animate-spin text-primary" />
+        Analyzing the inputs with evidence-based guardrails…
+      </div>
+    );
+  }
 
-  return {
-    summary,
-    rows,
-    recommendation,
-    matrixCopy: rows
-      .map((row) => `${row.competency}: ${row.signal} — ${row.evidence}`)
-      .join("\n"),
-  };
-}
+  if (!markdown) {
+    return (
+      <p className="rounded-lg border border-dashed border-border bg-surface-quiet p-5 text-sm leading-6 text-muted-foreground">
+        {emptyState}
+      </p>
+    );
+  }
 
-function createEmailDraft(
-  candidateName: string,
-  status: CandidateStatus,
-  tone: MessageTone,
-  notes: string,
-) {
-  const name = candidateName.trim() || "Candidate";
-  const context = notes.trim() || "Thank you for the time and thoughtful conversations with our team.";
-  const subjectByStatus: Record<CandidateStatus, string> = {
-    Offer: `Next steps for your offer, ${name}`,
-    Rejection: `Thank you for your time, ${name}`,
-    "Next Stage": `Next interview step for TalentFlow, ${name}`,
-  };
-  const openerByTone: Record<MessageTone, string> = {
-    Empathetic: `Hi ${name},\n\nThank you again for the care and time you invested in the process.`,
-    Direct: `Hi ${name},\n\nThank you for speaking with the team.`,
-    Executive: `Hi ${name},\n\nThank you for a thoughtful and productive interview process.`,
-  };
-  const decisionByStatus: Record<CandidateStatus, string> = {
-    Offer:
-      "We are excited to move forward with an offer. The team saw strong alignment between your experience and the outcomes needed in the role.",
-    Rejection:
-      "After careful review, we will not be moving forward at this time. This decision was based on role-specific evidence from the process.",
-    "Next Stage":
-      "We would like to invite you to the next stage. The next conversation will focus on the role-specific areas the panel wants to explore further.",
-  };
-  const body = `${openerByTone[tone]}\n\n${decisionByStatus[status]}\n\n${context}\n\nPlease reply with any questions or scheduling constraints, and we will make sure the next step is clear.\n\nBest,\nTalentFlow Recruiting Team`;
-
-  return {
-    subject: subjectByStatus[status],
-    body,
-    copyText: `Subject: ${subjectByStatus[status]}\n\n${body}`,
-  };
+  return (
+    <div className="rounded-lg bg-surface-quiet p-5">
+      <MarkdownView markdown={markdown} />
+    </div>
+  );
 }
 
 async function copyToClipboard(text: string) {
