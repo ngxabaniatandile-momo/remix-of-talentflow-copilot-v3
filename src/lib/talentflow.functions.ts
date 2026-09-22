@@ -59,33 +59,42 @@ export const generateScorecard = createServerFn({ method: "POST" })
 
 const EmailInput = z.object({
   candidateName: z.string().trim().min(1, "Candidate name is required"),
+  roleTitle: z.string().trim().min(1, "Role title is required"),
   status: z.enum(["Offer", "Rejection", "Next Stage"]),
   tone: z.enum(["Empathetic", "Direct", "Executive"]),
   notes: z.string().trim().default(""),
 });
 
+const emailStatusLabels: Record<string, string> = {
+  Offer: "Offer",
+  Rejection: "Empathetic Rejection",
+  "Next Stage": "Next Round Invitation",
+};
+
 const emailSystemPrompt = `[ROLE]
-You are a Senior Candidate Experience Partner who writes clear, legally-sound, and respectful candidate communications.
+You are an Executive Talent Communications Director specialized in high-empathy candidate engagement and employment brand management.
 
 [TASK]
-Draft a single tailored candidate email that matches the supplied decision status and requested tone.
+Draft a personalized, professional candidate update email based on the interview stage and outcome.
 
 [CONTEXT]
-Recruiters need consistent, humane communication that reflects only job-related evidence and keeps the candidate informed of concrete next steps.
+Delivering hiring outcomes requires precision: rejections must preserve candidate dignity and brand reputation, while offers must be clear and motivating. The candidate details, decision status, tone preference, and key feedback are provided in the user message.
 
 [CONSTRAINTS & GUARDRAILS]
-1. Grounded Output: Use only the facts and feedback supplied. Never invent compensation figures, dates, names, or commitments.
-2. Bias Shield: Never reference gender, age, appearance, nationality, accent, family status, health, or other protected characteristics.
-3. Legal Safety: For a Rejection, keep feedback role-related and non-defamatory; do not state legally risky reasons.
-4. Data Gaps: If a next step or detail is missing, use a neutral placeholder in square brackets such as [insert date].
-5. Output Tone: Match the requested tone exactly while staying professional and concise (max 200 words in the body).
+1. Rejection Standards: Never use cold, dismissive clichés (e.g., "we received many qualified applicants"). Include genuine appreciation for their preparation and reference one specific positive trait from the feedback notes.
+2. Offer Standards: Place all sensitive variables (salary, start date, benefits) inside bracketed placeholders (e.g., "[Annual Base: $X]", "[Start Date: Date]").
+3. Compliance: Do not include language that touches on protected demographic characteristics or opens legal liability.
+4. Word Count: Keep the email body between 150 and 220 words.
+5. Tone: Match the requested tone preference exactly (Empathetic, Direct, or Executive).
 
 [FORMAT]
 Return strictly in Markdown:
 
-**Subject**: (one clear subject line)
+**Subject**: [Clear, personalized subject line with candidate name and role]
 
-(Email body starting with a greeting and ending with a sign-off from the TalentFlow Recruiting Team)`;
+[Email Body]
+
+[Professional Sign-off and Signature Placeholder]`;
 
 export const generateCandidateEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => EmailInput.parse(input))
@@ -95,9 +104,10 @@ export const generateCandidateEmail = createServerFn({ method: "POST" })
       effort: "low",
       user: [
         `Candidate Name: ${data.candidateName}`,
-        `Decision Status: ${data.status}`,
-        `Requested Tone: ${data.tone}`,
-        `Recruiter Notes: ${data.notes || "[No additional notes provided]"}`,
+        `Role Title: ${data.roleTitle}`,
+        `Decision Status: ${emailStatusLabels[data.status] ?? data.status} (Options: Offer / Empathetic Rejection / Next Round Invitation)`,
+        `Tone Preference: ${data.tone} (Options: Empathetic, Direct, Executive)`,
+        `Key Feedback Provided: ${data.notes || "[No feedback notes provided]"}`,
       ].join("\n\n"),
     });
 

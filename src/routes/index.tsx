@@ -89,6 +89,7 @@ function TalentFlowApp() {
   const [candidateRole, setCandidateRole] = useState("");
   const [interviewNotes, setInterviewNotes] = useState("");
   const [draftName, setDraftName] = useState("");
+  const [draftRole, setDraftRole] = useState("");
   const [status, setStatus] = useState<CandidateStatus>("Next Stage");
   const [tone, setTone] = useState<MessageTone>("Empathetic");
   const [candidateNotes, setCandidateNotes] = useState("");
@@ -130,6 +131,7 @@ function TalentFlowApp() {
       const result = await generateCandidateEmail({
         data: {
           candidateName: draftName || "Candidate",
+          roleTitle: draftRole || "the role",
           status,
           tone,
           notes: candidateNotes,
@@ -372,6 +374,16 @@ function TalentFlowApp() {
                       className="bg-surface-quiet"
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="draft-role">Role Title</Label>
+                    <Input
+                      id="draft-role"
+                      value={draftRole}
+                      onChange={(event) => setDraftRole(event.target.value)}
+                      placeholder="Senior Frontend Engineer"
+                      className="bg-surface-quiet"
+                    />
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Status</Label>
@@ -417,13 +429,14 @@ function TalentFlowApp() {
                       ) : (
                         <Mail aria-hidden="true" className="size-4" />
                       )}
-                      {emailLoading ? "Generating…" : "Generate Email"}
+                      {emailLoading ? "Drafting…" : "Draft Communication"}
                     </Button>
                     <Button
                       type="button"
                       variant="secondary"
                       onClick={() => {
                         setDraftName("Avery Patel");
+                        setDraftRole("Senior Frontend Engineer");
                         setStatus("Next Stage");
                         setTone("Empathetic");
                         setCandidateNotes(communicationSample);
@@ -440,7 +453,7 @@ function TalentFlowApp() {
                   <GeneratedOutput
                     markdown={emailMarkdown}
                     loading={emailLoading}
-                    emptyState="Add the candidate, status, tone and notes, then select Generate Email to draft a tailored, bias-screened message."
+                    emptyState="Add the candidate, role, status, tone and notes, then select Draft Communication to write a tailored, bias-screened message."
                   />
                 </OutputCard>
 
