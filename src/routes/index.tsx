@@ -17,7 +17,6 @@ import {
   Scale,
   Settings2,
   ShieldCheck,
-  Trash2,
   UserRound,
   Users,
   Video,
