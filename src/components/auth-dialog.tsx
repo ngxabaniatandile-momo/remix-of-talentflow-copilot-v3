@@ -184,7 +184,14 @@ export function AuthDialog({
               ))}
             </div>
             <p className="text-center text-sm text-muted-foreground">Code expires in {time} minutes (AI-generated secure PIN)</p>
-            <Button variant="outline" className="w-full rounded-full" onClick={() => setDigits(["1", "2", "3", "4"])}>
+            <Button
+              variant="outline"
+              className="w-full rounded-full"
+              onClick={() => {
+                setDigits(["1", "2", "3", "4"]);
+                complete(channel === "phone" ? "Phone verified successfully" : "Email verified successfully");
+              }}
+            >
               Use demo code 1234
             </Button>
             <Button variant="ghost" className="w-full" onClick={() => setStep("root")}>
