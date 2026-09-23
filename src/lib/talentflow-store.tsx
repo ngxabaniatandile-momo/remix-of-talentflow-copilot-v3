@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 
 export type WorkspaceId = "acme" | "starktech" | "global-retail";
 
@@ -12,7 +20,11 @@ export type Workspace = {
   members: number;
 };
 
-export type TeamMember = { name: string; role: "Admin" | "Reviewer" | "Interviewer"; email: string };
+export type TeamMember = {
+  name: string;
+  role: "Admin" | "Reviewer" | "Interviewer";
+  email: string;
+};
 
 export type ComplianceSettings = {
   piiRedaction: boolean;
@@ -41,9 +53,33 @@ export type HistoryItem = {
 };
 
 export const workspaces: Workspace[] = [
-  { id: "acme", name: "Acme Corp — Talent Operations", subtitle: "HQ & Corporate", initials: "AC", department: "Talent Operations", region: "Johannesburg, ZA", members: 12 },
-  { id: "starktech", name: "StarkTech — Engineering Hiring", subtitle: "Software & Tech Teams", initials: "ST", department: "Engineering", region: "Cape Town, ZA", members: 8 },
-  { id: "global-retail", name: "Global Retail — High-Volume Ops", subtitle: "Store & Regional Staff", initials: "GR", department: "Retail Operations", region: "Durban, ZA", members: 27 },
+  {
+    id: "acme",
+    name: "Acme Corp — Talent Operations",
+    subtitle: "HQ & Corporate",
+    initials: "AC",
+    department: "Talent Operations",
+    region: "Johannesburg, ZA",
+    members: 12,
+  },
+  {
+    id: "starktech",
+    name: "StarkTech — Engineering Hiring",
+    subtitle: "Software & Tech Teams",
+    initials: "ST",
+    department: "Engineering",
+    region: "Cape Town, ZA",
+    members: 8,
+  },
+  {
+    id: "global-retail",
+    name: "Global Retail — High-Volume Ops",
+    subtitle: "Store & Regional Staff",
+    initials: "GR",
+    department: "Retail Operations",
+    region: "Durban, ZA",
+    members: 27,
+  },
 ];
 
 export const workspaceTeams: Record<WorkspaceId, TeamMember[]> = {
@@ -63,12 +99,31 @@ export const workspaceTeams: Record<WorkspaceId, TeamMember[]> = {
 };
 
 export const accounts: WorkspaceUser[] = [
-  { id: "kelvin", name: "Kelvin", title: "Talent Lead", initials: "KT", email: "kelvin.talent@acme.com", admin: true },
-  { id: "priya", name: "Priya Patel", title: "Lead Tech Interviewer", initials: "PP", email: "priya@acme.com" },
+  {
+    id: "kelvin",
+    name: "Kelvin",
+    title: "Talent Lead",
+    initials: "KT",
+    email: "kelvin.talent@acme.com",
+    admin: true,
+  },
+  {
+    id: "priya",
+    name: "Priya Patel",
+    title: "Lead Tech Interviewer",
+    initials: "PP",
+    email: "priya@acme.com",
+  },
   { id: "sam", name: "Sam Brooks", title: "People Partner", initials: "SB", email: "sam@acme.com" },
 ];
 
-export const guestUser: WorkspaceUser = { id: "guest", name: "Guest", title: "Guest Mode", initials: "G", email: "" };
+export const guestUser: WorkspaceUser = {
+  id: "guest",
+  name: "Guest",
+  title: "Guest Mode",
+  initials: "G",
+  email: "",
+};
 
 function safeRead<T>(key: string, fallback: T): T {
   try {
@@ -90,7 +145,11 @@ function safeWrite(key: string, value: unknown) {
   }
 }
 
-const defaultCompliance: ComplianceSettings = { piiRedaction: true, anonymizedReview: false, recordingConsent: true };
+const defaultCompliance: ComplianceSettings = {
+  piiRedaction: true,
+  anonymizedReview: false,
+  recordingConsent: true,
+};
 
 type StoreValue = {
   workspaceId: WorkspaceId;
@@ -140,7 +199,11 @@ export function TalentFlowProvider({ children }: { children: ReactNode }) {
     (item: Omit<HistoryItem, "id" | "at">) => {
       setHistoryMap((current) => {
         const existing = current[workspaceId] || [];
-        const next: HistoryItem = { ...item, id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, at: Date.now() };
+        const next: HistoryItem = {
+          ...item,
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          at: Date.now(),
+        };
         return { ...current, [workspaceId]: [next, ...existing].slice(0, 40) };
       });
     },
@@ -171,7 +234,9 @@ export function TalentFlowProvider({ children }: { children: ReactNode }) {
       setCompliance: (next) => setComplianceMap((current) => ({ ...current, [workspaceId]: next })),
       team: workspaceTeams[workspaceId] || [],
       authenticated,
-      activeUser: authenticated ? accounts.find((user) => user.id === activeUserId) || accounts[0]! : guestUser,
+      activeUser: authenticated
+        ? accounts.find((user) => user.id === activeUserId) || accounts[0]!
+        : guestUser,
       accounts,
       signIn: (userId = "kelvin") => {
         setActiveUserId(userId);
@@ -182,7 +247,15 @@ export function TalentFlowProvider({ children }: { children: ReactNode }) {
       history: historyMap[workspaceId] || [],
       logHistory,
     };
-  }, [workspaceList, workspaceId, complianceMap, authenticated, activeUserId, historyMap, logHistory]);
+  }, [
+    workspaceList,
+    workspaceId,
+    complianceMap,
+    authenticated,
+    activeUserId,
+    historyMap,
+    logHistory,
+  ]);
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

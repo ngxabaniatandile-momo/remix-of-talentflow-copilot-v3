@@ -44,7 +44,11 @@ import { cn } from "@/lib/utils";
 type ChatMessage = { id: string; sender: string; body: string; ai?: boolean };
 
 const personalSample: ChatMessage[] = [
-  { id: "p1", sender: "You", body: "Help me define evidence signals for a senior platform engineer." },
+  {
+    id: "p1",
+    sender: "You",
+    body: "Help me define evidence signals for a senior platform engineer.",
+  },
   {
     id: "p2",
     sender: "TalentFlow AI",
@@ -54,8 +58,16 @@ const personalSample: ChatMessage[] = [
 ];
 
 const groupSample: ChatMessage[] = [
-  { id: "g1", sender: "Priya · Engineering", body: "Alex showed strong API depth, but I want clearer evidence on incident ownership." },
-  { id: "g2", sender: "Sam · People", body: "Agreed. Their mentoring example was specific and measurable." },
+  {
+    id: "g1",
+    sender: "Priya · Engineering",
+    body: "Alex showed strong API depth, but I want clearer evidence on incident ownership.",
+  },
+  {
+    id: "g2",
+    sender: "Sam · People",
+    body: "Agreed. Their mentoring example was specific and measurable.",
+  },
   {
     id: "g3",
     sender: "TalentFlow AI",
@@ -101,7 +113,10 @@ function ChatView({ group = false }: { group?: boolean }) {
     setDraft("");
     setTyping(true);
     window.setTimeout(() => {
-      setMessages((current) => [...current, { id: `${id}-ai`, sender: "TalentFlow AI", body: aiReply(body, group), ai: true }]);
+      setMessages((current) => [
+        ...current,
+        { id: `${id}-ai`, sender: "TalentFlow AI", body: aiReply(body, group), ai: true },
+      ]);
       setTyping(false);
     }, 900);
     store.logHistory({
@@ -135,11 +150,18 @@ function ChatView({ group = false }: { group?: boolean }) {
       <Card className="border-border shadow-sm">
         <CardHeader className="border-b border-border">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <CardTitle className="text-base">{group ? `# ${channel}` : "Private conversation"}</CardTitle>
+            <CardTitle className="text-base">
+              {group ? `# ${channel}` : "Private conversation"}
+            </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               {group &&
                 channels.map((item) => (
-                  <Button key={item} size="sm" variant={item === channel ? "secondary" : "ghost"} onClick={() => setChannel(item)}>
+                  <Button
+                    key={item}
+                    size="sm"
+                    variant={item === channel ? "secondary" : "ghost"}
+                    onClick={() => setChannel(item)}
+                  >
                     #{item.replace("-panel", "")}
                   </Button>
                 ))}
@@ -156,16 +178,28 @@ function ChatView({ group = false }: { group?: boolean }) {
                 <div className="max-w-sm">
                   <Bot className="mx-auto mb-3 size-9 text-primary" />
                   <p className="font-semibold">Start a focused conversation</p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">Ask about hiring criteria, policy, interview design, or panel evidence.</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Ask about hiring criteria, policy, interview design, or panel evidence.
+                  </p>
                 </div>
               </div>
             ) : (
               (messages || []).map((message) => (
-                <div key={message.id} className={cn("flex", message.ai || message.sender !== store.activeUser.name ? "justify-start" : "justify-end")}>
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.ai || message.sender !== store.activeUser.name
+                      ? "justify-start"
+                      : "justify-end",
+                  )}
+                >
                   <div
                     className={cn(
                       "max-w-2xl rounded-lg px-4 py-3",
-                      message.ai || message.sender !== store.activeUser.name ? "bg-surface-panel" : "bg-primary text-primary-foreground",
+                      message.ai || message.sender !== store.activeUser.name
+                        ? "bg-surface-panel"
+                        : "bg-primary text-primary-foreground",
                     )}
                   >
                     <p className="mb-1 text-xs font-bold opacity-75">{message.sender}</p>
@@ -176,7 +210,8 @@ function ChatView({ group = false }: { group?: boolean }) {
             )}
             {typing && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" /> TalentFlow AI is {group ? "building consensus" : "thinking"}…
+                <Loader2 className="size-4 animate-spin" /> TalentFlow AI is{" "}
+                {group ? "building consensus" : "thinking"}…
               </div>
             )}
           </div>
@@ -187,7 +222,12 @@ function ChatView({ group = false }: { group?: boolean }) {
               onKeyDown={(event) => event.key === "Enter" && sendMessage()}
               placeholder={group ? "Share evidence with the panel…" : "Ask your AI copilot…"}
             />
-            <Button size="icon" onClick={sendMessage} aria-label="Send message" disabled={!draft.trim()}>
+            <Button
+              size="icon"
+              onClick={sendMessage}
+              aria-label="Send message"
+              disabled={!draft.trim()}
+            >
               <Send />
             </Button>
           </div>
@@ -239,7 +279,12 @@ export function SchedulesView() {
             onClick={() => {
               setLoaded(true);
               setTasks(initialTasks);
-              store.logHistory({ kind: "meeting", label: "Loaded daily talent operations plan", status: "Planner", payload: {} });
+              store.logHistory({
+                kind: "meeting",
+                label: "Loaded daily talent operations plan",
+                status: "Planner",
+                payload: {},
+              });
             }}
             variant="outline"
           >
@@ -249,7 +294,11 @@ export function SchedulesView() {
       }
     >
       {!loaded ? (
-        <EmptyPanel icon={CalendarClock} title="No schedule loaded" body="Load sample data to populate today’s talent operations plan." />
+        <EmptyPanel
+          icon={CalendarClock}
+          title="No schedule loaded"
+          body="Load sample data to populate today’s talent operations plan."
+        />
       ) : (
         <div className="grid gap-5 xl:grid-cols-3">
           <Card className="shadow-sm">
@@ -267,7 +316,9 @@ export function SchedulesView() {
                     variant={reviewedEmails.includes(email) ? "secondary" : "outline"}
                     className="mt-3"
                     onClick={() => {
-                      setReviewedEmails((current) => (current.includes(email) ? current : [...current, email]));
+                      setReviewedEmails((current) =>
+                        current.includes(email) ? current : [...current, email],
+                      );
                       toast.success("Email marked reviewed");
                     }}
                   >
@@ -285,7 +336,11 @@ export function SchedulesView() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Interview candidate="Alex Chen" role="Senior Full-Stack Engineer" time="Today · 14:00" />
+              <Interview
+                candidate="Alex Chen"
+                role="Senior Full-Stack Engineer"
+                time="Today · 14:00"
+              />
               <Interview candidate="Morgan Lee" role="Frontend Lead" time="Tomorrow · 09:30" />
               <Interview candidate="Jordan Smith" role="Junior Sales" time="Thu · 11:00" />
             </CardContent>
@@ -301,16 +356,33 @@ export function SchedulesView() {
             </CardHeader>
             <CardContent className="space-y-3">
               {(tasks || []).map((task) => (
-                <label key={task.id} className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3">
+                <label
+                  key={task.id}
+                  className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3"
+                >
                   <Checkbox
                     checked={task.done}
                     onCheckedChange={(checked) =>
-                      setTasks((current) => (current || []).map((item) => (item.id === task.id ? { ...item, done: checked === true } : item)))
+                      setTasks((current) =>
+                        (current || []).map((item) =>
+                          item.id === task.id ? { ...item, done: checked === true } : item,
+                        ),
+                      )
                     }
                   />
                   <span className="min-w-0">
-                    <span className={cn("block text-sm font-medium", task.done && "text-muted-foreground line-through")}>{task.text}</span>
-                    <Badge variant={task.priority === "High" ? "default" : "secondary"} className="mt-2">
+                    <span
+                      className={cn(
+                        "block text-sm font-medium",
+                        task.done && "text-muted-foreground line-through",
+                      )}
+                    >
+                      {task.text}
+                    </span>
+                    <Badge
+                      variant={task.priority === "High" ? "default" : "secondary"}
+                      className="mt-2"
+                    >
                       {task.priority}
                     </Badge>
                   </span>
@@ -337,29 +409,91 @@ function Interview({ candidate, role, time }: { candidate: string; role: string;
 type Asset = { name: string; category: string; body: string };
 
 const assetList: Asset[] = [
-  { name: "Senior Full-Stack Engineer", category: "Job Descriptions", body: "Own customer-facing services end to end: RESTful API design, PostgreSQL tuning, AWS/Docker operations, and mentorship of mid-level engineers." },
-  { name: "People Operations Partner", category: "Job Descriptions", body: "Partner with leaders on hiring plans, performance cycles, and POPIA-aligned employee data practices." },
-  { name: "Enterprise Account Executive", category: "Job Descriptions", body: "Own enterprise pipeline generation, multi-stakeholder discovery, and disciplined forecast hygiene." },
-  { name: "Architecture & Scale", category: "Interview Guides", body: "Probe trade-offs under load: caching strategy, indexing decisions, failure modes, and measurable reliability outcomes." },
-  { name: "Leadership Behaviors", category: "Interview Guides", body: "Explore mentorship evidence, conflict resolution, and decisions made with incomplete information." },
-  { name: "Customer Discovery", category: "Interview Guides", body: "Assess questioning discipline, qualification frameworks, and evidence of measurable pipeline impact." },
-  { name: "Next Round Invitation", category: "Email Templates", body: "Subject: Next conversation for the [Role] role\n\nHi [Name], the panel valued your specific examples and would like to continue..." },
-  { name: "Empathetic Rejection", category: "Email Templates", body: "Subject: Update on your [Role] application\n\nHi [Name], thank you for the preparation you brought to every conversation..." },
-  { name: "Executive Offer", category: "Email Templates", body: "Subject: Offer for the [Role] role\n\nHi [Name], we are delighted to offer you the position. [Annual Base: $X] · [Start Date: Date]..." },
-  { name: "POPIA Candidate Data Handling", category: "HR Compliance Policies", body: "Candidate personal information is processed only for the stated hiring purpose, minimized at capture, and redacted before AI analysis." },
-  { name: "GDPR Retention Standard", category: "HR Compliance Policies", body: "Candidate records are retained for 12 months post-decision unless consent for a longer talent-pool period is explicitly captured." },
-  { name: "Fair Hiring & AI Review", category: "HR Compliance Policies", body: "Every AI-generated evaluation requires documented human review before any hiring decision is communicated." },
+  {
+    name: "Senior Full-Stack Engineer",
+    category: "Job Descriptions",
+    body: "Own customer-facing services end to end: RESTful API design, PostgreSQL tuning, AWS/Docker operations, and mentorship of mid-level engineers.",
+  },
+  {
+    name: "People Operations Partner",
+    category: "Job Descriptions",
+    body: "Partner with leaders on hiring plans, performance cycles, and POPIA-aligned employee data practices.",
+  },
+  {
+    name: "Enterprise Account Executive",
+    category: "Job Descriptions",
+    body: "Own enterprise pipeline generation, multi-stakeholder discovery, and disciplined forecast hygiene.",
+  },
+  {
+    name: "Architecture & Scale",
+    category: "Interview Guides",
+    body: "Probe trade-offs under load: caching strategy, indexing decisions, failure modes, and measurable reliability outcomes.",
+  },
+  {
+    name: "Leadership Behaviors",
+    category: "Interview Guides",
+    body: "Explore mentorship evidence, conflict resolution, and decisions made with incomplete information.",
+  },
+  {
+    name: "Customer Discovery",
+    category: "Interview Guides",
+    body: "Assess questioning discipline, qualification frameworks, and evidence of measurable pipeline impact.",
+  },
+  {
+    name: "Next Round Invitation",
+    category: "Email Templates",
+    body: "Subject: Next conversation for the [Role] role\n\nHi [Name], the panel valued your specific examples and would like to continue...",
+  },
+  {
+    name: "Empathetic Rejection",
+    category: "Email Templates",
+    body: "Subject: Update on your [Role] application\n\nHi [Name], thank you for the preparation you brought to every conversation...",
+  },
+  {
+    name: "Executive Offer",
+    category: "Email Templates",
+    body: "Subject: Offer for the [Role] role\n\nHi [Name], we are delighted to offer you the position. [Annual Base: $X] · [Start Date: Date]...",
+  },
+  {
+    name: "POPIA Candidate Data Handling",
+    category: "HR Compliance Policies",
+    body: "Candidate personal information is processed only for the stated hiring purpose, minimized at capture, and redacted before AI analysis.",
+  },
+  {
+    name: "GDPR Retention Standard",
+    category: "HR Compliance Policies",
+    body: "Candidate records are retained for 12 months post-decision unless consent for a longer talent-pool period is explicitly captured.",
+  },
+  {
+    name: "Fair Hiring & AI Review",
+    category: "HR Compliance Policies",
+    body: "Every AI-generated evaluation requires documented human review before any hiring decision is communicated.",
+  },
 ];
 
-const assetCategories = ["Job Descriptions", "Interview Guides", "Email Templates", "HR Compliance Policies"];
+const assetCategories = [
+  "Job Descriptions",
+  "Interview Guides",
+  "Email Templates",
+  "HR Compliance Policies",
+];
 
-export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset: { name: string; category: string; body: string }) => void }) {
+export function LibraryView({
+  onOpenInWorkspace,
+}: {
+  onOpenInWorkspace?: (asset: { name: string; category: string; body: string }) => void;
+}) {
   const store = useTalentFlow();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Asset | null>(null);
 
   const filtered = useMemo(
-    () => (assetList || []).filter((asset) => asset.name.toLowerCase().includes(query.toLowerCase()) || asset.body.toLowerCase().includes(query.toLowerCase())),
+    () =>
+      (assetList || []).filter(
+        (asset) =>
+          asset.name.toLowerCase().includes(query.toLowerCase()) ||
+          asset.body.toLowerCase().includes(query.toLowerCase()),
+      ),
     [query],
   );
 
@@ -373,12 +507,21 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
   }
 
   return (
-    <ViewFrame icon={BookOpen} title="HR Asset Library" description="Controlled templates, guidance, and compliance references for consistent talent operations.">
+    <ViewFrame
+      icon={BookOpen}
+      title="HR Asset Library"
+      description="Controlled templates, guidance, and compliance references for consistent talent operations."
+    >
       <Card className="shadow-sm">
         <CardContent className="p-5">
           <div className="relative mb-5">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the HR library" />
+            <Input
+              className="pl-9"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search the HR library"
+            />
           </div>
           <Tabs defaultValue="Job Descriptions">
             <TabsList className="h-auto w-full justify-start overflow-x-auto bg-surface-panel">
@@ -393,7 +536,11 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
               return (
                 <TabsContent key={category} value={category} className="mt-5">
                   {items.length === 0 ? (
-                    <EmptyPanel icon={Search} title="No matching assets" body="Try a different search term for this category." />
+                    <EmptyPanel
+                      icon={Search}
+                      title="No matching assets"
+                      body="Try a different search term for this category."
+                    />
                   ) : (
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                       {items.map((asset) => (
@@ -405,7 +552,9 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
                         >
                           <FileText className="mb-3 size-5 text-primary" />
                           <p className="font-semibold">{asset.name}</p>
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{asset.body}</p>
+                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                            {asset.body}
+                          </p>
                         </button>
                       ))}
                     </div>
@@ -425,7 +574,9 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
               {selected?.category} · {store.workspace.name}
             </DialogDescription>
           </DialogHeader>
-          <p className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-panel p-4 text-sm leading-6">{selected?.body}</p>
+          <p className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-panel p-4 text-sm leading-6">
+            {selected?.body}
+          </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => selected && copyAsset(selected)}>
               <Copy /> Copy
@@ -434,7 +585,12 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
               onClick={() => {
                 if (!selected) return;
                 onOpenInWorkspace?.(selected);
-                store.logHistory({ kind: "benchmark", label: `Opened ${selected.name}`, status: selected.category, payload: { asset: selected.name } });
+                store.logHistory({
+                  kind: "benchmark",
+                  label: `Opened ${selected.name}`,
+                  status: selected.category,
+                  payload: { asset: selected.name },
+                });
                 setSelected(null);
               }}
             >
@@ -459,7 +615,11 @@ const transcriptTurns = [
   "I mentor two mid-level engineers; one now owns our caching layer after we paired on the design review.",
 ];
 
-export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (candidate: { name: string; role: string; notes: string }) => void }) {
+export function MeetingView({
+  onExportToScorecard,
+}: {
+  onExportToScorecard?: (candidate: { name: string; role: string; notes: string }) => void;
+}) {
   const store = useTalentFlow();
   const [provider, setProvider] = useState<"Microsoft Teams" | "Google Meet" | null>(null);
   const [consentOpen, setConsentOpen] = useState(false);
@@ -480,15 +640,39 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
     setLive(true);
     setTurn(0);
     toast.success(`${provider ?? "Meeting"} copilot connected`);
-    store.logHistory({ kind: "meeting", label: `Live session · ${candidate.name}`, status: provider ?? "Meeting", payload: { candidate: candidate.name } });
+    store.logHistory({
+      kind: "meeting",
+      label: `Live session · ${candidate.name}`,
+      status: provider ?? "Meeting",
+      payload: { candidate: candidate.name },
+    });
   }
 
   const currentTranscript = transcriptTurns[turn] ?? transcriptTurns[0]!;
   const suggestions = [
-    { title: "Suggested question", body: turn === 0 ? "What evidence showed the index was the root cause rather than caching?" : turn === 1 ? "Which decisions were yours alone during the incident?" : "What behaviour changed for the mentee after the pairing?" },
-    { title: "Tone check", body: "Balanced and specific. Allow the candidate space to complete the technical sequence.", positive: true },
-    { title: "Bias check", body: "No demographic or non-job-related language detected in this segment.", positive: true },
-    { title: "Objective follow-up", body: "Ask how the improvement was measured after release, and over what period." },
+    {
+      title: "Suggested question",
+      body:
+        turn === 0
+          ? "What evidence showed the index was the root cause rather than caching?"
+          : turn === 1
+            ? "Which decisions were yours alone during the incident?"
+            : "What behaviour changed for the mentee after the pairing?",
+    },
+    {
+      title: "Tone check",
+      body: "Balanced and specific. Allow the candidate space to complete the technical sequence.",
+      positive: true,
+    },
+    {
+      title: "Bias check",
+      body: "No demographic or non-job-related language detected in this segment.",
+      positive: true,
+    },
+    {
+      title: "Objective follow-up",
+      body: "Ask how the improvement was measured after release, and over what period.",
+    },
   ];
 
   return (
@@ -522,25 +706,44 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
               <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">Candidate</p>
               <div className="flex flex-wrap gap-2">
                 {(meetingCandidates || []).map((item) => (
-                  <Button key={item.name} size="sm" variant={item.name === candidate.name ? "default" : "outline"} onClick={() => setCandidate(item)}>
+                  <Button
+                    key={item.name}
+                    size="sm"
+                    variant={item.name === candidate.name ? "default" : "outline"}
+                    onClick={() => setCandidate(item)}
+                  >
                     {item.name}
                   </Button>
                 ))}
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">Meeting link or room ID</p>
-              <Input value={roomUrl} onChange={(event) => setRoomUrl(event.target.value)} placeholder="https://teams.microsoft.com/l/meetup-join/…" />
+              <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">
+                Meeting link or room ID
+              </p>
+              <Input
+                value={roomUrl}
+                onChange={(event) => setRoomUrl(event.target.value)}
+                placeholder="https://teams.microsoft.com/l/meetup-join/…"
+              />
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Button variant="outline" className="h-20 justify-start" onClick={() => requestConnection("Microsoft Teams")}>
+              <Button
+                variant="outline"
+                className="h-20 justify-start"
+                onClick={() => requestConnection("Microsoft Teams")}
+              >
                 <Video className="size-5 text-primary" />
                 <span className="text-left">
                   <span className="block font-bold">Microsoft Teams</span>
                   <span className="text-xs text-muted-foreground">Connect meeting</span>
                 </span>
               </Button>
-              <Button variant="outline" className="h-20 justify-start" onClick={() => requestConnection("Google Meet")}>
+              <Button
+                variant="outline"
+                className="h-20 justify-start"
+                onClick={() => requestConnection("Google Meet")}
+              >
                 <Video className="size-5 text-primary" />
                 <span className="text-left">
                   <span className="block font-bold">Google Meet</span>
@@ -565,17 +768,28 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
                 <p className="mt-1 text-sm opacity-75">
                   {provider ?? "Microsoft Teams"} · {candidate.role}
                 </p>
-                {roomUrl.trim() !== "" && <p className="mt-1 max-w-sm truncate text-xs opacity-60">{roomUrl}</p>}
+                {roomUrl.trim() !== "" && (
+                  <p className="mt-1 max-w-sm truncate text-xs opacity-60">{roomUrl}</p>
+                )}
                 <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold">
                   <Circle className="size-2 fill-current" /> Live consent confirmed
                 </div>
               </div>
             </div>
             <CardContent className="space-y-3 border-t p-4">
-              <p className="text-xs font-bold uppercase text-muted-foreground">Live transcript signal · turn {turn + 1}/{transcriptTurns.length}</p>
+              <p className="text-xs font-bold uppercase text-muted-foreground">
+                Live transcript signal · turn {turn + 1}/{transcriptTurns.length}
+              </p>
               <p className="text-sm leading-6">“{currentTranscript}”</p>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={() => setTurn((value) => Math.min(transcriptTurns.length - 1, value + 1))} disabled={turn >= transcriptTurns.length - 1}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    setTurn((value) => Math.min(transcriptTurns.length - 1, value + 1))
+                  }
+                  disabled={turn >= transcriptTurns.length - 1}
+                >
                   <RefreshCw /> Next transcript turn
                 </Button>
                 <Button
@@ -593,7 +807,12 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
           </Card>
           <div className="space-y-4">
             {(suggestions || []).map((item) => (
-              <Insight key={item.title} title={item.title} body={item.body} positive={item.positive === true} />
+              <Insight
+                key={item.title}
+                title={item.title}
+                body={item.body}
+                positive={item.positive === true}
+              />
             ))}
           </div>
         </div>
@@ -603,15 +822,21 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-alert-foreground" /> Consent & Transparency Required
+              <AlertTriangle className="size-5 text-alert-foreground" /> Consent & Transparency
+              Required
             </DialogTitle>
             <DialogDescription className="leading-6">
-              TalentFlow requires participant confirmation before initiating live transcription and real-time behavioral guidance. Compliant with POPIA/GDPR.
+              TalentFlow requires participant confirmation before initiating live transcription and
+              real-time behavioral guidance. Compliant with POPIA/GDPR.
             </DialogDescription>
           </DialogHeader>
           <label className="flex items-start gap-3 rounded-md bg-alert p-4 text-sm text-alert-foreground">
-            <Checkbox checked={consented} onCheckedChange={(checked) => setConsented(checked === true)} /> I confirm every participant has been informed and has
-            consented to transcription and AI assistance.
+            <Checkbox
+              checked={consented}
+              onCheckedChange={(checked) => setConsented(checked === true)}
+            />{" "}
+            I confirm every participant has been informed and has consented to transcription and AI
+            assistance.
           </label>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConsentOpen(false)}>
@@ -627,12 +852,24 @@ export function MeetingView({ onExportToScorecard }: { onExportToScorecard?: (ca
   );
 }
 
-function Insight({ title, body, positive = false }: { title: string; body: string; positive?: boolean }) {
+function Insight({
+  title,
+  body,
+  positive = false,
+}: {
+  title: string;
+  body: string;
+  positive?: boolean;
+}) {
   return (
     <Card className={cn("shadow-sm", positive && "border-primary/30 bg-accent")}>
       <CardContent className="p-4">
         <p className="flex items-center gap-2 text-xs font-bold uppercase text-muted-foreground">
-          {positive ? <CheckCircle2 className="size-4 text-primary" /> : <Sparkles className="size-4 text-primary" />}
+          {positive ? (
+            <CheckCircle2 className="size-4 text-primary" />
+          ) : (
+            <Sparkles className="size-4 text-primary" />
+          )}
           {title}
         </p>
         <p className="mt-2 text-sm leading-6">{body}</p>
@@ -641,7 +878,15 @@ function Insight({ title, body, positive = false }: { title: string; body: strin
   );
 }
 
-function EmptyPanel({ icon: Icon, title, body }: { icon: typeof CalendarClock; title: string; body: string }) {
+function EmptyPanel({
+  icon: Icon,
+  title,
+  body,
+}: {
+  icon: typeof CalendarClock;
+  title: string;
+  body: string;
+}) {
   return (
     <Card className="border-dashed shadow-none">
       <CardContent className="grid min-h-60 place-items-center p-6 text-center">

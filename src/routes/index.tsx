@@ -71,10 +71,23 @@ import {
   type MessageTone,
 } from "@/components/workflow-panels";
 import { generateCandidateEmail, generateScorecard } from "@/lib/talentflow.functions";
-import { groupHistory, TalentFlowProvider, useTalentFlow, type HistoryItem } from "@/lib/talentflow-store";
+import {
+  groupHistory,
+  TalentFlowProvider,
+  useTalentFlow,
+  type HistoryItem,
+} from "@/lib/talentflow-store";
 import { cn } from "@/lib/utils";
 
-type ViewId = "benchmark" | "scorecard" | "drafter" | "personal" | "group" | "schedules" | "library" | "meeting";
+type ViewId =
+  | "benchmark"
+  | "scorecard"
+  | "drafter"
+  | "personal"
+  | "group"
+  | "schedules"
+  | "library"
+  | "meeting";
 type NavItem = { id: ViewId; label: string; icon: LucideIcon };
 
 const notesSample = `Avery described building a weekly hiring health dashboard after noticing recruiters were using three separate spreadsheets. They partnered with analytics to standardize funnel definitions, trained hiring managers on evidence-based debriefs, and reduced time-to-slate by 18% over two quarters.
@@ -119,7 +132,10 @@ export const Route = createFileRoute("/")({
           "A secure AI workspace for role benchmarking, candidate evaluation, communications, panel collaboration, and hiring operations.",
       },
       { property: "og:title", content: "TalentFlow — Enterprise Talent Operations Copilot" },
-      { property: "og:description", content: "Run structured, evidence-led talent operations with responsible AI safeguards." },
+      {
+        property: "og:description",
+        content: "Run structured, evidence-led talent operations with responsible AI safeguards.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -136,7 +152,9 @@ function TalentFlowRoute() {
 }
 
 function errorMessage(error: unknown) {
-  return error instanceof Error && error.message ? error.message : "Something went wrong while generating. Please try again.";
+  return error instanceof Error && error.message
+    ? error.message
+    : "Something went wrong while generating. Please try again.";
 }
 
 function TalentFlowApp() {
@@ -223,14 +241,23 @@ function TalentFlowApp() {
     setScorecardLoading(true);
     try {
       const result = await generateScorecard({
-        data: { candidateName: candidateName || "Candidate", roleTitle: candidateRole, rawNotes: interviewNotes },
+        data: {
+          candidateName: candidateName || "Candidate",
+          roleTitle: candidateRole,
+          rawNotes: interviewNotes,
+        },
       });
       setScorecardMarkdown(result.markdown);
       store.logHistory({
         kind: "scorecard",
         label: `${candidateName || "Candidate"} — scorecard`,
         status: candidateRole || "Evaluation",
-        payload: { candidateName, roleTitle: candidateRole, notes: interviewNotes, markdown: result.markdown },
+        payload: {
+          candidateName,
+          roleTitle: candidateRole,
+          notes: interviewNotes,
+          markdown: result.markdown,
+        },
       });
       toast.success("Scorecard generated");
     } catch (error) {
@@ -244,14 +271,25 @@ function TalentFlowApp() {
     setEmailLoading(true);
     try {
       const result = await generateCandidateEmail({
-        data: { candidateName: draftName || "Candidate", roleTitle: draftRole || "the role", status, tone, notes: candidateNotes },
+        data: {
+          candidateName: draftName || "Candidate",
+          roleTitle: draftRole || "the role",
+          status,
+          tone,
+          notes: candidateNotes,
+        },
       });
       setEmailMarkdown(result.markdown);
       store.logHistory({
         kind: "email",
         label: `${draftName || "Candidate"} — ${status.toLowerCase()} email`,
         status: tone,
-        payload: { candidateName: draftName, roleTitle: draftRole, notes: candidateNotes, markdown: result.markdown },
+        payload: {
+          candidateName: draftName,
+          roleTitle: draftRole,
+          notes: candidateNotes,
+          markdown: result.markdown,
+        },
       });
       toast.success("Email draft generated");
     } catch (error) {
@@ -285,7 +323,11 @@ function TalentFlowApp() {
         onManageWorkspaces={() => setWorkspacesOpen(true)}
       />
       <SidebarInset className="min-w-0">
-        <WorkspaceHeader activeView={activeView} onAuthenticate={() => setAuthOpen(true)} onManageWorkspaces={() => setWorkspacesOpen(true)} />
+        <WorkspaceHeader
+          activeView={activeView}
+          onAuthenticate={() => setAuthOpen(true)}
+          onManageWorkspaces={() => setWorkspacesOpen(true)}
+        />
         <div className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl" key={workspaceId}>
             <ViewPanel active={activeView === "benchmark"}>
@@ -303,7 +345,9 @@ function TalentFlowApp() {
                 onCandidateRoleChange={setCandidateRole}
                 onInterviewNotesChange={setInterviewNotes}
                 onGenerate={generateAssessment}
-                onReviewChange={(value) => setReviewed((current) => ({ ...current, scorecard: value }))}
+                onReviewChange={(value) =>
+                  setReviewed((current) => ({ ...current, scorecard: value }))
+                }
                 onLoadSample={() => {
                   setCandidateName("Avery Patel");
                   setCandidateRole("Senior People Operations Partner");
@@ -328,7 +372,9 @@ function TalentFlowApp() {
                 onToneChange={setTone}
                 onNotesChange={setCandidateNotes}
                 onGenerate={generateEmail}
-                onReviewChange={(value) => setReviewed((current) => ({ ...current, drafter: value }))}
+                onReviewChange={(value) =>
+                  setReviewed((current) => ({ ...current, drafter: value }))
+                }
                 onLoadSample={() => {
                   setDraftName("Avery Patel");
                   setDraftRole("Senior Frontend Engineer");
@@ -367,7 +413,11 @@ function TalentFlowApp() {
             </ViewPanel>
           </div>
         </div>
-        <AuthDialog open={authOpen} onOpenChange={setAuthOpen} onAuthenticated={() => store.signIn("kelvin")} />
+        <AuthDialog
+          open={authOpen}
+          onOpenChange={setAuthOpen}
+          onAuthenticated={() => store.signIn("kelvin")}
+        />
         <ManageWorkspacesDialog open={workspacesOpen} onOpenChange={setWorkspacesOpen} />
       </SidebarInset>
     </SidebarProvider>
@@ -402,13 +452,22 @@ function WorkspaceSidebar({
       <SidebarHeader className="border-b border-sidebar-border p-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-12 w-full justify-start gap-3 px-2 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:p-0">
+            <Button
+              variant="ghost"
+              className="h-12 w-full justify-start gap-3 px-2 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:p-0"
+            >
               <Avatar className="size-8 rounded-md">
-                <AvatarFallback className="rounded-md bg-primary text-primary-foreground">{store.workspace.initials}</AvatarFallback>
+                <AvatarFallback className="rounded-md bg-primary text-primary-foreground">
+                  {store.workspace.initials}
+                </AvatarFallback>
               </Avatar>
               <span className="min-w-0 flex-1 text-left group-data-[collapsible=icon]:hidden">
-                <span className="block truncate text-sm font-bold">{store.workspace.name.split(" — ")[0]}</span>
-                <span className="block truncate text-xs text-muted-foreground">{store.workspace.department}</span>
+                <span className="block truncate text-sm font-bold">
+                  {store.workspace.name.split(" — ")[0]}
+                </span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {store.workspace.department}
+                </span>
               </span>
               <ChevronDown className="size-4 group-data-[collapsible=icon]:hidden" />
             </Button>
@@ -433,7 +492,12 @@ function WorkspaceSidebar({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button size="sm" className="mt-2 w-full group-data-[collapsible=icon]:hidden" variant="outline" onClick={onNewSession}>
+        <Button
+          size="sm"
+          className="mt-2 w-full group-data-[collapsible=icon]:hidden"
+          variant="outline"
+          onClick={onNewSession}
+        >
           <Plus /> New session
         </Button>
       </SidebarHeader>
@@ -445,7 +509,11 @@ function WorkspaceSidebar({
               <SidebarMenu>
                 {(group.items || []).map((item) => (
                   <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton tooltip={item.label} isActive={activeView === item.id} onClick={() => selectView(item.id)}>
+                    <SidebarMenuButton
+                      tooltip={item.label}
+                      isActive={activeView === item.id}
+                      onClick={() => selectView(item.id)}
+                    >
                       <item.icon />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
@@ -466,7 +534,9 @@ function WorkspaceSidebar({
             ) : (
               (groups || []).map((group) => (
                 <div key={group.label} className="mb-2">
-                  <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground group-data-[collapsible=icon]:hidden">{group.label}</p>
+                  <p className="px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground group-data-[collapsible=icon]:hidden">
+                    {group.label}
+                  </p>
                   <SidebarMenu>
                     {(group.items || []).map((item) => (
                       <SidebarMenuItem key={item.id}>
@@ -481,7 +551,9 @@ function WorkspaceSidebar({
                           <History className="mt-0.5" />
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{item.label}</span>
-                            <span className="block truncate text-xs text-muted-foreground">{item.status ?? item.kind}</span>
+                            <span className="block truncate text-xs text-muted-foreground">
+                              {item.status ?? item.kind}
+                            </span>
                           </span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -497,13 +569,20 @@ function WorkspaceSidebar({
         {store.authenticated ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-auto w-full justify-start gap-3 p-2 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:p-0">
+              <Button
+                variant="ghost"
+                className="h-auto w-full justify-start gap-3 p-2 group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:p-0"
+              >
                 <Avatar className="size-8">
-                  <AvatarFallback className="bg-accent text-accent-foreground">{store.activeUser.initials}</AvatarFallback>
+                  <AvatarFallback className="bg-accent text-accent-foreground">
+                    {store.activeUser.initials}
+                  </AvatarFallback>
                 </Avatar>
                 <span className="min-w-0 text-left group-data-[collapsible=icon]:hidden">
                   <span className="block truncate text-sm font-bold">{store.activeUser.name}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{store.activeUser.title}</span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {store.activeUser.title}
+                  </span>
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -570,11 +649,16 @@ function WorkspaceHeader({
 }) {
   const store = useTalentFlow();
   const { state } = useSidebar();
-  const label = navGroups.flatMap((group) => group.items).find((item) => item.id === activeView)?.label ?? "TalentFlow";
+  const label =
+    navGroups.flatMap((group) => group.items).find((item) => item.id === activeView)?.label ??
+    "TalentFlow";
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
       <div className="flex min-h-16 items-center gap-3 px-4 sm:px-6">
-        <SidebarTrigger className="size-9" aria-label={state === "expanded" ? "Collapse sidebar" : "Expand sidebar"}>
+        <SidebarTrigger
+          className="size-9"
+          aria-label={state === "expanded" ? "Collapse sidebar" : "Expand sidebar"}
+        >
           {state === "expanded" ? <PanelLeftClose /> : <PanelLeftOpen />}
         </SidebarTrigger>
         <div className="grid size-9 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground">
@@ -582,7 +666,8 @@ function WorkspaceHeader({
         </div>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-extrabold">
-            TalentFlow <span className="hidden font-medium text-muted-foreground sm:inline">· {label}</span>
+            TalentFlow{" "}
+            <span className="hidden font-medium text-muted-foreground sm:inline">· {label}</span>
           </p>
           <p className="hidden text-xs text-muted-foreground sm:block">{store.workspace.name}</p>
         </div>
@@ -594,9 +679,13 @@ function WorkspaceHeader({
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="gap-2 rounded-full pl-1 pr-3">
                 <Avatar className="size-7">
-                  <AvatarFallback className="bg-accent text-xs text-accent-foreground">{store.activeUser.initials}</AvatarFallback>
+                  <AvatarFallback className="bg-accent text-xs text-accent-foreground">
+                    {store.activeUser.initials}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="hidden text-sm font-semibold sm:inline">{store.activeUser.name}</span>
+                <span className="hidden text-sm font-semibold sm:inline">
+                  {store.activeUser.name}
+                </span>
                 <CheckCircle2 className="size-4 text-primary" />
               </Button>
             </DropdownMenuTrigger>
