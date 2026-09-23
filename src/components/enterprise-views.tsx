@@ -380,7 +380,7 @@ export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset:
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input className="pl-9" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search the HR library" />
           </div>
-          <Tabs defaultValue={assetCategories[0]}>
+          <Tabs defaultValue="Job Descriptions">
             <TabsList className="h-auto w-full justify-start overflow-x-auto bg-surface-panel">
               {(assetCategories || []).map((category) => (
                 <TabsTrigger key={category} value={category}>
