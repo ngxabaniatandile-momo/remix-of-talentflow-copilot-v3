@@ -12,6 +12,7 @@ import {
   Loader2,
   Mail,
   MessageSquare,
+  Pencil,
   Plus,
   RefreshCw,
   Search,
@@ -20,10 +21,12 @@ import {
   Trash2,
   Users,
   Video,
+  X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { MarkdownView } from "@/components/markdown-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,94 +40,348 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTalentFlow } from "@/lib/talentflow-store";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { askCopilot } from "@/lib/talentflow.functions";
+import { useTalentFlow, type SessionMessage } from "@/lib/talentflow-store";
 import { cn } from "@/lib/utils";
 
-type ChatMessage = { id: string; sender: string; body: string; ai?: boolean };
+function messageId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
 
-const personalSample: ChatMessage[] = [
+function titleFrom(prompt: string) {
+  const clean = prompt.trim().replace(/\s+/g, " ");
+  return clean.length > 48 ? `${clean.slice(0, 48)}…` : clean || "New conversation";
+}
+
+const personalSample: SessionMessage[] = [
   {
     id: "p1",
-    sender: "You",
-    body: "Help me define evidence signals for a senior platform engineer.",
+    role: "user",
+    author: "You",
+    content: "Help me design a rubric for a senior platform engineer.",
+    at: Date.now(),
   },
   {
     id: "p2",
-    sender: "TalentFlow AI",
-    body: "Prioritize architecture trade-offs, production ownership, mentoring impact, and measurable reliability improvements. I can turn these into an interview rubric next.",
-    ai: true,
+    role: "assistant",
+    author: "TalentFlow AI",
+    content:
+      "**Senior Platform Engineer rubric**\n\n- **Architecture trade-offs** — can justify caching, indexing and failure-mode decisions with data.\n- **Production ownership** — evidence of on-call, incident recovery and postmortems.\n- **Mentoring impact** — a named engineer who grew into a defined responsibility.\n- **Reliability outcomes** — a measured before/after figure.\n\nWant me to turn this into three behavioural questions?",
+    at: Date.now(),
+  },
+  {
+    id: "p3",
+    role: "user",
+    author: "You",
+    content: "Yes, and keep them evidence-seeking.",
+    at: Date.now(),
+  },
+  {
+    id: "p4",
+    role: "assistant",
+    author: "TalentFlow AI",
+    content:
+      "1. Walk me through a scaling decision where the data contradicted your instinct. What changed after release, and over what period?\n2. Describe the last high-severity incident you owned. Which actions were yours alone?\n3. Tell me about an engineer you mentored. What did they own before, and what do they own now?",
+    at: Date.now(),
   },
 ];
 
-const groupSample: ChatMessage[] = [
-  {
-    id: "g1",
-    sender: "Priya · Engineering",
-    body: "Alex showed strong API depth, but I want clearer evidence on incident ownership.",
-  },
-  {
-    id: "g2",
-    sender: "Sam · People",
-    body: "Agreed. Their mentoring example was specific and measurable.",
-  },
-  {
-    id: "g3",
-    sender: "TalentFlow AI",
-    body: "Consensus is trending positive. Suggested follow-up: ask Alex to walk through a high-severity incident and separate personal actions from team outcomes.",
-    ai: true,
-  },
+const channels = [
+  { id: "senior-full-stack", label: "#senior-full-stack" },
+  { id: "frontend-lead", label: "#frontend-lead" },
+  { id: "sales-hiring", label: "#sales-hiring" },
 ];
 
-const channels = ["senior-full-stack-panel", "frontend-lead-panel", "sales-hiring-panel"];
-
-function aiReply(prompt: string, group: boolean) {
-  const trimmed = prompt.trim();
-  if (group) {
-    return `Captured for the panel: “${trimmed.slice(0, 90)}”. Emerging consensus — keep scoring evidence-based, and ask one follow-up that separates individual contribution from team outcome before the final decision.`;
-  }
-  if (/question/i.test(trimmed)) {
-    return `Here are two structured questions you can use:\n1. Walk me through a decision where the data contradicted your instinct.\n2. What measurable outcome followed, and what would you change now?`;
-  }
-  if (/policy|popia|gdpr|compliance/i.test(trimmed)) {
-    return "Under POPIA/GDPR you may only process candidate data for the stated hiring purpose, retain it for the published period, and must redact identifiers before AI analysis. TalentFlow applies the redaction automatically.";
-  }
-  return `Noted: “${trimmed.slice(0, 90)}”. I'd convert that into one observable interview signal and one structured follow-up question so scoring stays evidence-based.`;
+function groupSample(channelLabel: string): SessionMessage[] {
+  const now = Date.now();
+  return [
+    {
+      id: "g1",
+      role: "user",
+      author: "Kelvin · Talent",
+      content: `Opening the ${channelLabel} debrief. Share evidence only, no impressions.`,
+      at: now,
+    },
+    {
+      id: "g2",
+      role: "user",
+      author: "Priya · Engineering",
+      content:
+        "Strong API depth — traced a missing index and added a performance budget. I still want clearer evidence of incident ownership.",
+      at: now,
+    },
+    {
+      id: "g3",
+      role: "user",
+      author: "Sam · People",
+      content:
+        "Mentoring example was specific and measurable: one engineer now owns the caching layer after a paired design review.",
+      at: now,
+    },
+    {
+      id: "g4",
+      role: "user",
+      author: "Kelvin · Talent",
+      content: "Trade-off is depth in backend versus limited exposure to our data pipeline.",
+      at: now,
+    },
+    {
+      id: "g5",
+      role: "user",
+      author: "Priya · Engineering",
+      content: "Pipeline gap is trainable. The architecture reasoning is not.",
+      at: now,
+    },
+    {
+      id: "g6",
+      role: "assistant",
+      author: "TalentFlow AI",
+      content:
+        "**Panel consensus (draft)**\n\nEvidence supports advancing. Strengths: architecture reasoning, measured reliability improvement, documented mentoring. Open gap: data pipeline exposure — assess with one scoped scenario in the final stage rather than treating it as a blocker.",
+      at: now,
+    },
+  ];
 }
 
-function ChatView({ group = false }: { group?: boolean }) {
+function panelReplies(prompt: string, channelLabel: string): SessionMessage[] {
+  const now = Date.now();
+  const focus = prompt.trim().slice(0, 80);
+  return [
+    {
+      id: `${now}-priya`,
+      role: "user",
+      author: "Priya Patel · Engineering",
+      content: `On the technical side: I'd want one more artefact behind "${focus}" — the design doc or the query plan — before we score it.`,
+      at: now,
+    },
+    {
+      id: `${now}-sam`,
+      role: "user",
+      author: "Sam Brooks · People",
+      content:
+        "From the collaboration angle, that matches what the panel saw: they name the people they worked with and separate their own actions from team outcomes.",
+      at: now + 1,
+    },
+    {
+      id: `${now}-ai`,
+      role: "assistant",
+      author: "TalentFlow AI",
+      content: `**Consensus summary — ${channelLabel}**\n\nThe panel is aligned on the observed evidence. Recommended next step: one scoped follow-up question that isolates individual contribution, then score against the benchmark before any decision is communicated.`,
+      at: now + 2,
+    },
+  ];
+}
+
+function workspaceContextFrom(history: { kind: string; label: string; payload: Record<string, string> }[]) {
+  const lines = (history || []).slice(0, 15).map((item) => {
+    if (item.kind === "scorecard") {
+      return `SCORECARD — candidate: ${item.payload["candidateName"] || "Unknown"}; role: ${
+        item.payload["roleTitle"] || "Unknown"
+      }; assessment: ${(item.payload["markdown"] || "").slice(0, 700)}`;
+    }
+    if (item.kind === "email") {
+      return `CANDIDATE EMAIL — candidate: ${item.payload["candidateName"] || "Unknown"}; role: ${
+        item.payload["roleTitle"] || "Unknown"
+      }; draft: ${(item.payload["markdown"] || "").slice(0, 400)}`;
+    }
+    return `SESSION — ${item.kind}: ${item.label}`;
+  });
+  return lines.join("\n\n").slice(0, 8000);
+}
+
+type ChatProps = { restoreId?: string | null; group?: boolean };
+
+function ChatView({ restoreId = null, group = false }: ChatProps) {
   const store = useTalentFlow();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<SessionMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [typing, setTyping] = useState(false);
-  const [channel, setChannel] = useState(channels[0]!);
+  const [channelId, setChannelId] = useState(channels[0]!.id);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const sample = group ? groupSample : personalSample;
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const timers = useRef<number[]>([]);
+
+  const channelLabel = channels.find((item) => item.id === channelId)?.label ?? channels[0]!.label;
+  const history = store.history;
+  const workspaceName = store.workspace.name;
+  const logHistory = store.logHistory;
+  const updateSession = store.updateSession;
+
+  useEffect(
+    () => () => {
+      timers.current.forEach((timer) => window.clearTimeout(timer));
+    },
+    [],
+  );
+
+  // Restore a full thread when the sidebar opens a saved session.
+  useEffect(() => {
+    if (!restoreId) return;
+    const item = (history || []).find((entry) => entry.id === restoreId);
+    if (!item) return;
+    setSessionId(item.id);
+    setMessages(item.messages || []);
+    if (item.channel) setChannelId(item.channel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restoreId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing]);
 
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, [sessionId]);
+
+  // Persist the whole thread as one session object whenever it changes.
+  useEffect(() => {
+    if (!sessionId || messages.length === 0) return;
+    updateSession(sessionId, { messages, channel: group ? channelId : undefined });
+  }, [messages, sessionId, channelId, group, updateSession]);
+
+  const ensureSession = useCallback(
+    (firstPrompt: string, initial: SessionMessage[]) => {
+      if (sessionId) return sessionId;
+      const id = logHistory({
+        kind: group ? "panel" : "chat",
+        label: titleFrom(firstPrompt),
+        status: group ? channelLabel : "Copilot",
+        payload: { module: group ? "panel" : "copilot" },
+        messages: initial,
+        channel: group ? channelId : undefined,
+      });
+      setSessionId(id);
+      return id;
+    },
+    [sessionId, logHistory, group, channelLabel, channelId],
+  );
+
+  const runAssistant = useCallback(
+    async (thread: SessionMessage[]) => {
+      const last = [...thread].reverse().find((item) => item.role === "user");
+      if (!last) return;
+      setTyping(true);
+
+      if (group) {
+        const replies = panelReplies(last.content, channelLabel);
+        [1000, 2500, 4000].forEach((delay, index) => {
+          const timer = window.setTimeout(() => {
+            setMessages((current) => [...current, replies[index]!]);
+            if (index === 2) setTyping(false);
+          }, delay);
+          timers.current.push(timer);
+        });
+        return;
+      }
+
+      try {
+        const result = await askCopilot({
+          data: {
+            question: last.content,
+            history: thread
+              .slice(-10, -1)
+              .map((item) => ({ role: item.role, content: item.content })),
+            workspaceName,
+            workspaceContext: workspaceContextFrom(history),
+          },
+        });
+        setMessages((current) => [
+          ...current,
+          {
+            id: messageId(),
+            role: "assistant",
+            author: "TalentFlow AI",
+            content: result.answer || "I couldn't produce an answer for that. Try rephrasing.",
+            at: Date.now(),
+          },
+        ]);
+      } catch (error) {
+        const detail =
+          error instanceof Error && error.message
+            ? error.message
+            : "The copilot is unavailable right now.";
+        toast.error(detail);
+        setMessages((current) => [
+          ...current,
+          {
+            id: messageId(),
+            role: "assistant",
+            author: "TalentFlow AI",
+            content: `I couldn't reach the AI service. ${detail}`,
+            at: Date.now(),
+          },
+        ]);
+      } finally {
+        setTyping(false);
+      }
+    },
+    [group, channelLabel, workspaceName, history],
+  );
+
   function sendMessage() {
     const body = draft.trim();
-    if (!body) return;
-    const id = `${Date.now()}`;
-    setMessages((current) => [...current, { id, sender: store.activeUser.name, body }]);
+    if (!body || typing) return;
+    const userMessage: SessionMessage = {
+      id: messageId(),
+      role: "user",
+      author: group ? `${store.activeUser.name} · Talent` : "You",
+      content: body,
+      at: Date.now(),
+    };
+    const next = [...messages, userMessage];
+    setMessages(next);
     setDraft("");
-    setTyping(true);
-    window.setTimeout(() => {
-      setMessages((current) => [
-        ...current,
-        { id: `${id}-ai`, sender: "TalentFlow AI", body: aiReply(body, group), ai: true },
-      ]);
-      setTyping(false);
-    }, 900);
-    store.logHistory({
-      kind: group ? "panel" : "chat",
-      label: body.slice(0, 48),
-      status: group ? `#${channel}` : "Copilot",
-      payload: { prompt: body },
-    });
+    ensureSession(body, next);
+    void runAssistant(next);
+  }
+
+  function submitEdit(id: string) {
+    const body = editValue.trim();
+    if (!body) return;
+    const index = messages.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const truncated = [...messages.slice(0, index), { ...messages[index]!, content: body }];
+    setMessages(truncated);
+    setEditingId(null);
+    setEditValue("");
+    if (!sessionId) ensureSession(body, truncated);
+    void runAssistant(truncated);
+    toast.success("Prompt updated — regenerating response");
+  }
+
+  function newConversation() {
+    timers.current.forEach((timer) => window.clearTimeout(timer));
+    timers.current = [];
+    setSessionId(null);
+    setMessages([]);
+    setTyping(false);
+    setDraft("");
+    setEditingId(null);
+    inputRef.current?.focus();
+    toast.success("New conversation started");
+  }
+
+  function loadSample() {
+    const sample = group ? groupSample(channelLabel) : personalSample;
+    setMessages(sample);
+    const id = ensureSession(
+      group ? `${channelLabel} panel deliberation` : "Rubric design conversation",
+      sample,
+    );
+    updateSession(id, { messages: sample });
   }
 
   return (
@@ -134,14 +391,14 @@ function ChatView({ group = false }: { group?: boolean }) {
       description={
         group
           ? "A shared decision room for panel evidence, scoring, and final hiring consensus."
-          : "Your private workspace for role criteria, interview questions, and HR policy guidance."
+          : "Ask anything — general questions, role design, or questions about this workspace's candidates and scorecards."
       }
       action={
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setMessages([])}>
+          <Button variant="outline" onClick={newConversation}>
             <Plus /> New conversation
           </Button>
-          <Button variant="outline" onClick={() => setMessages(sample)}>
+          <Button variant="outline" onClick={loadSample}>
             <Sparkles /> Load Sample Data
           </Button>
         </div>
@@ -151,18 +408,24 @@ function ChatView({ group = false }: { group?: boolean }) {
         <CardHeader className="border-b border-border">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base">
-              {group ? `# ${channel}` : "Private conversation"}
+              {group ? channelLabel : "Private conversation"}
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               {group &&
                 channels.map((item) => (
                   <Button
-                    key={item}
+                    key={item.id}
                     size="sm"
-                    variant={item === channel ? "secondary" : "ghost"}
-                    onClick={() => setChannel(item)}
+                    variant={item.id === channelId ? "secondary" : "ghost"}
+                    onClick={() => {
+                      if (item.id === channelId) return;
+                      setChannelId(item.id);
+                      setSessionId(null);
+                      setMessages([]);
+                      toast.success(`Switched to ${item.label}`);
+                    }}
                   >
-                    #{item.replace("-panel", "")}
+                    {item.label}
                   </Button>
                 ))}
               <Badge variant="secondary" className="gap-1">
@@ -179,34 +442,70 @@ function ChatView({ group = false }: { group?: boolean }) {
                   <Bot className="mx-auto mb-3 size-9 text-primary" />
                   <p className="font-semibold">Start a focused conversation</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    Ask about hiring criteria, policy, interview design, or panel evidence.
+                    {group
+                      ? "Share evidence with the panel and TalentFlow will summarise consensus."
+                      : "Ask a general question, design a rubric, or ask what this workspace knows about a candidate."}
                   </p>
                 </div>
               </div>
             ) : (
-              (messages || []).map((message) => (
-                <div
-                  key={message.id}
-                  className={cn(
-                    "flex",
-                    message.ai || message.sender !== store.activeUser.name
-                      ? "justify-start"
-                      : "justify-end",
-                  )}
-                >
+              (messages || []).map((message) => {
+                const mine = message.role === "user";
+                const editing = editingId === message.id;
+                return (
                   <div
-                    className={cn(
-                      "max-w-2xl rounded-lg px-4 py-3",
-                      message.ai || message.sender !== store.activeUser.name
-                        ? "bg-surface-panel"
-                        : "bg-primary text-primary-foreground",
-                    )}
+                    key={message.id}
+                    className={cn("group flex", mine ? "justify-end" : "justify-start")}
                   >
-                    <p className="mb-1 text-xs font-bold opacity-75">{message.sender}</p>
-                    <p className="whitespace-pre-wrap text-sm leading-6">{message.body}</p>
+                    <div className={cn("flex max-w-2xl items-start gap-2", mine && "flex-row-reverse")}>
+                      {mine && !editing ? (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Edit message"
+                          className="mt-1 size-7 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                          onClick={() => {
+                            setEditingId(message.id);
+                            setEditValue(message.content);
+                          }}
+                        >
+                          <Pencil className="size-3.5" />
+                        </Button>
+                      ) : null}
+                      <div
+                        className={cn(
+                          "rounded-lg px-4 py-3",
+                          mine ? "bg-primary text-primary-foreground" : "bg-surface-panel",
+                        )}
+                      >
+                        <p className="mb-1 text-xs font-bold opacity-75">{message.author}</p>
+                        {editing ? (
+                          <div className="space-y-2">
+                            <Textarea
+                              value={editValue}
+                              onChange={(event) => setEditValue(event.target.value)}
+                              className="min-h-24 bg-card text-foreground"
+                              aria-label="Edit prompt"
+                            />
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="secondary" onClick={() => submitEdit(message.id)}>
+                                Save & regenerate
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        ) : mine ? (
+                          <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+                        ) : (
+                          <MarkdownView markdown={message.content} />
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
             {typing && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -215,18 +514,26 @@ function ChatView({ group = false }: { group?: boolean }) {
               </div>
             )}
           </div>
-          <div className="flex gap-2 border-t border-border p-4">
-            <Input
+          <div className="flex items-end gap-2 border-t border-border p-4">
+            <Textarea
+              ref={inputRef}
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && sendMessage()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !event.shiftKey) {
+                  event.preventDefault();
+                  sendMessage();
+                }
+              }}
+              rows={1}
+              className="max-h-40 min-h-11 resize-none"
               placeholder={group ? "Share evidence with the panel…" : "Ask your AI copilot…"}
             />
             <Button
               size="icon"
               onClick={sendMessage}
               aria-label="Send message"
-              disabled={!draft.trim()}
+              disabled={!draft.trim() || typing}
             >
               <Send />
             </Button>
@@ -237,11 +544,11 @@ function ChatView({ group = false }: { group?: boolean }) {
   );
 }
 
-export function PersonalChatView() {
-  return <ChatView />;
+export function PersonalChatView({ restoreId = null }: { restoreId?: string | null }) {
+  return <ChatView restoreId={restoreId} />;
 }
-export function GroupChatView() {
-  return <ChatView group />;
+export function GroupChatView({ restoreId = null }: { restoreId?: string | null }) {
+  return <ChatView restoreId={restoreId} group />;
 }
 
 const initialTasks = [
@@ -406,18 +713,18 @@ function Interview({ candidate, role, time }: { candidate: string; role: string;
   );
 }
 
-type Asset = { name: string; category: string; body: string };
+export type Asset = { name: string; category: string; body: string };
 
 const assetList: Asset[] = [
   {
     name: "Senior Full-Stack Engineer",
     category: "Job Descriptions",
-    body: "Own customer-facing services end to end: RESTful API design, PostgreSQL tuning, AWS/Docker operations, and mentorship of mid-level engineers.",
+    body: "Own customer-facing services end to end: RESTful API design, PostgreSQL tuning, AWS/Docker operations, and mentorship of mid-level engineers.\n\nKey requirements:\n- Design and ship documented RESTful APIs\n- Strong PostgreSQL indexing and query tuning\n- Architecture ownership for scalability and reliability\n- Mentor mid-level engineers and raise review quality",
   },
   {
     name: "People Operations Partner",
     category: "Job Descriptions",
-    body: "Partner with leaders on hiring plans, performance cycles, and POPIA-aligned employee data practices.",
+    body: "Partner with leaders on hiring plans, performance cycles, and POPIA-aligned employee data practices.\n\nKey requirements:\n- Workforce planning with hiring managers\n- Evidence-based debrief facilitation\n- Employee data handling under POPIA/GDPR",
   },
   {
     name: "Enterprise Account Executive",
@@ -427,32 +734,32 @@ const assetList: Asset[] = [
   {
     name: "Architecture & Scale",
     category: "Interview Guides",
-    body: "Probe trade-offs under load: caching strategy, indexing decisions, failure modes, and measurable reliability outcomes.",
+    body: "Competencies: System Architecture, Data Modelling, Reliability.\n\nProbe trade-offs under load: caching strategy, indexing decisions, failure modes, and measurable reliability outcomes.",
   },
   {
     name: "Leadership Behaviors",
     category: "Interview Guides",
-    body: "Explore mentorship evidence, conflict resolution, and decisions made with incomplete information.",
+    body: "Competencies: Mentorship, Conflict Resolution, Decision Making.\n\nExplore mentorship evidence, conflict resolution, and decisions made with incomplete information.",
   },
   {
     name: "Customer Discovery",
     category: "Interview Guides",
-    body: "Assess questioning discipline, qualification frameworks, and evidence of measurable pipeline impact.",
+    body: "Competencies: Questioning Discipline, Qualification, Pipeline Impact.\n\nAssess evidence of measurable pipeline impact and structured qualification.",
   },
   {
     name: "Next Round Invitation",
     category: "Email Templates",
-    body: "Subject: Next conversation for the [Role] role\n\nHi [Name], the panel valued your specific examples and would like to continue...",
+    body: "Subject: Next conversation for the [Role] role\n\nHi [Name], the panel valued your specific examples and would like to continue the conversation with [Interviewer] on [Date].",
   },
   {
     name: "Empathetic Rejection",
     category: "Email Templates",
-    body: "Subject: Update on your [Role] application\n\nHi [Name], thank you for the preparation you brought to every conversation...",
+    body: "Subject: Update on your [Role] application\n\nHi [Name], thank you for the preparation you brought to every conversation. The panel especially noted [Specific Positive Trait].",
   },
   {
-    name: "Executive Offer",
+    name: "Offer Letter — Executive",
     category: "Email Templates",
-    body: "Subject: Offer for the [Role] role\n\nHi [Name], we are delighted to offer you the position. [Annual Base: $X] · [Start Date: Date]...",
+    body: "Subject: Offer for the [Role] role\n\nHi [Name], we are delighted to offer you the position. [Annual Base: $X] · [Start Date: Date] · [Benefits Summary].",
   },
   {
     name: "POPIA Candidate Data Handling",
@@ -478,29 +785,28 @@ const assetCategories = [
   "HR Compliance Policies",
 ];
 
-export function LibraryView({
-  onOpenInWorkspace,
-}: {
-  onOpenInWorkspace?: (asset: { name: string; category: string; body: string }) => void;
-}) {
+export function LibraryView({ onOpenInWorkspace }: { onOpenInWorkspace?: (asset: Asset) => void }) {
   const store = useTalentFlow();
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<string>(assetCategories[0]!);
   const [selected, setSelected] = useState<Asset | null>(null);
 
-  const filtered = useMemo(
-    () =>
-      (assetList || []).filter(
-        (asset) =>
-          asset.name.toLowerCase().includes(query.toLowerCase()) ||
-          asset.body.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [query],
-  );
+  const filtered = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return (assetList || []).filter(
+      (asset) =>
+        asset.category === category &&
+        (term === "" ||
+          asset.name.toLowerCase().includes(term) ||
+          asset.category.toLowerCase().includes(term) ||
+          asset.body.toLowerCase().includes(term)),
+    );
+  }, [query, category]);
 
   async function copyAsset(asset: Asset) {
     try {
       await navigator.clipboard.writeText(`${asset.name}\n\n${asset.body}`);
-      toast.success("Asset copied to clipboard");
+      toast.success("Copied to clipboard");
     } catch {
       toast.error("Could not copy to clipboard");
     }
@@ -517,52 +823,58 @@ export function LibraryView({
           <div className="relative mb-5">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="px-9"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search the HR library"
+              aria-label="Search the HR library"
             />
+            {query ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setQuery("")}
+                className="absolute right-2 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-surface-panel"
+              >
+                <X className="size-3.5" />
+              </button>
+            ) : null}
           </div>
-          <Tabs defaultValue="Job Descriptions">
-            <TabsList className="h-auto w-full justify-start overflow-x-auto bg-surface-panel">
-              {(assetCategories || []).map((category) => (
-                <TabsTrigger key={category} value={category}>
-                  {category}
-                </TabsTrigger>
+          <div className="mb-5 flex flex-wrap gap-2">
+            {(assetCategories || []).map((item) => (
+              <Button
+                key={item}
+                size="sm"
+                variant={item === category ? "default" : "outline"}
+                className="rounded-full"
+                onClick={() => setCategory(item)}
+              >
+                {item}
+              </Button>
+            ))}
+          </div>
+          {filtered.length === 0 ? (
+            <EmptyPanel
+              icon={Search}
+              title="No matching assets"
+              body="Try a different search term or category."
+            />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {filtered.map((asset) => (
+                <button
+                  key={asset.name}
+                  type="button"
+                  onClick={() => setSelected(asset)}
+                  className="rounded-md border border-border bg-card p-4 text-left transition-colors hover:bg-surface-panel"
+                >
+                  <FileText className="mb-3 size-5 text-primary" />
+                  <p className="font-semibold">{asset.name}</p>
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{asset.body}</p>
+                </button>
               ))}
-            </TabsList>
-            {(assetCategories || []).map((category) => {
-              const items = filtered.filter((asset) => asset.category === category);
-              return (
-                <TabsContent key={category} value={category} className="mt-5">
-                  {items.length === 0 ? (
-                    <EmptyPanel
-                      icon={Search}
-                      title="No matching assets"
-                      body="Try a different search term for this category."
-                    />
-                  ) : (
-                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      {items.map((asset) => (
-                        <button
-                          key={asset.name}
-                          type="button"
-                          onClick={() => setSelected(asset)}
-                          className="rounded-md border border-border bg-card p-4 text-left transition-colors hover:bg-surface-panel"
-                        >
-                          <FileText className="mb-3 size-5 text-primary" />
-                          <p className="font-semibold">{asset.name}</p>
-                          <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                            {asset.body}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </TabsContent>
-              );
-            })}
-          </Tabs>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -571,7 +883,10 @@ export function LibraryView({
           <DialogHeader>
             <DialogTitle>{selected?.name}</DialogTitle>
             <DialogDescription>
-              {selected?.category} · {store.workspace.name}
+              <Badge variant="secondary" className="mr-2">
+                {selected?.category}
+              </Badge>
+              Updated this quarter · Approved by Legal · {store.workspace.name}
             </DialogDescription>
           </DialogHeader>
           <p className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-md bg-surface-panel p-4 text-sm leading-6">
@@ -579,7 +894,7 @@ export function LibraryView({
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => selected && copyAsset(selected)}>
-              <Copy /> Copy
+              <Copy /> Copy Template
             </Button>
             <Button
               onClick={() => {
@@ -594,7 +909,7 @@ export function LibraryView({
                 setSelected(null);
               }}
             >
-              Open in workspace
+              Open in Workspace
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -610,9 +925,21 @@ const meetingCandidates = [
 ];
 
 const transcriptTurns = [
-  "I reduced API response time by tracing a missing database index, then added a performance budget to our release checks.",
-  "When the incident escalated, I took the pager, isolated the failing service, and wrote the postmortem the same week.",
-  "I mentor two mid-level engineers; one now owns our caching layer after we paired on the design review.",
+  {
+    interviewer: "Tell me about a performance problem you personally diagnosed.",
+    candidate:
+      "I reduced API response time by tracing a missing database index, then added a performance budget to our release checks.",
+  },
+  {
+    interviewer: "What happened when that change did not hold under load?",
+    candidate:
+      "When the incident escalated, I took the pager, isolated the failing service, and wrote the postmortem the same week.",
+  },
+  {
+    interviewer: "How do you grow the engineers around you?",
+    candidate:
+      "I mentor two mid-level engineers; one now owns our caching layer after we paired on the design review.",
+  },
 ];
 
 export function MeetingView({
@@ -621,34 +948,54 @@ export function MeetingView({
   onExportToScorecard?: (candidate: { name: string; role: string; notes: string }) => void;
 }) {
   const store = useTalentFlow();
-  const [provider, setProvider] = useState<"Microsoft Teams" | "Google Meet" | null>(null);
-  const [consentOpen, setConsentOpen] = useState(false);
+  const [provider, setProvider] = useState<"Microsoft Teams" | "Google Meet">("Microsoft Teams");
   const [consented, setConsented] = useState(false);
   const [roomUrl, setRoomUrl] = useState("");
-  const [candidate, setCandidate] = useState(meetingCandidates[0]!);
+  const [candidateName, setCandidateName] = useState(meetingCandidates[0]!.name);
+  const [customCandidate, setCustomCandidate] = useState("");
   const [live, setLive] = useState(false);
   const [turn, setTurn] = useState(0);
+  const [seconds, setSeconds] = useState(0);
 
-  function requestConnection(next: "Microsoft Teams" | "Google Meet") {
-    setProvider(next);
-    setConsentOpen(true);
-  }
+  const candidate = useMemo(() => {
+    if (candidateName === "custom") {
+      return { name: customCandidate.trim() || "Candidate", role: "Custom pipeline entry" };
+    }
+    return meetingCandidates.find((item) => item.name === candidateName) ?? meetingCandidates[0]!;
+  }, [candidateName, customCandidate]);
+
+  useEffect(() => {
+    if (!live) return;
+    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000);
+    return () => window.clearInterval(timer);
+  }, [live]);
 
   function startSession() {
     if (!consented) return;
-    setConsentOpen(false);
     setLive(true);
     setTurn(0);
-    toast.success(`${provider ?? "Meeting"} copilot connected`);
+    setSeconds(0);
+    toast.success(`${provider} copilot connected`);
     store.logHistory({
       kind: "meeting",
       label: `Live session · ${candidate.name}`,
-      status: provider ?? "Meeting",
-      payload: { candidate: candidate.name },
+      status: provider,
+      payload: { candidate: candidate.name, room: roomUrl },
     });
   }
 
-  const currentTranscript = transcriptTurns[turn] ?? transcriptTurns[0]!;
+  function endSession() {
+    setLive(false);
+    setConsented(false);
+    setTurn(0);
+    setSeconds(0);
+  }
+
+  const current = transcriptTurns[turn] ?? transcriptTurns[0]!;
+  const clock = `${String(Math.floor(seconds / 3600)).padStart(2, "0")}:${String(
+    Math.floor(seconds / 60) % 60,
+  ).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+
   const suggestions = [
     {
       title: "Suggested question",
@@ -660,13 +1007,8 @@ export function MeetingView({
             : "What behaviour changed for the mentee after the pairing?",
     },
     {
-      title: "Tone check",
-      body: "Balanced and specific. Allow the candidate space to complete the technical sequence.",
-      positive: true,
-    },
-    {
-      title: "Bias check",
-      body: "No demographic or non-job-related language detected in this segment.",
+      title: "Tone & bias check",
+      body: "Balanced and objective. Allow the candidate time to elaborate on incident recovery.",
       positive: true,
     },
     {
@@ -675,6 +1017,13 @@ export function MeetingView({
     },
   ];
 
+  function transcriptText(upTo: number) {
+    return transcriptTurns
+      .slice(0, upTo + 1)
+      .map((entry) => `Interviewer: ${entry.interviewer}\n${candidate.name}: ${entry.candidate}`)
+      .join("\n\n");
+  }
+
   return (
     <ViewFrame
       icon={Video}
@@ -682,15 +1031,7 @@ export function MeetingView({
       description="Consent-led support for structured interviews across Microsoft Teams and Google Meet."
       action={
         live ? (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setLive(false);
-              setConsented(false);
-              setProvider(null);
-              setTurn(0);
-            }}
-          >
+          <Button variant="outline" onClick={endSession}>
             <Trash2 /> End session
           </Button>
         ) : undefined
@@ -703,60 +1044,79 @@ export function MeetingView({
           </CardHeader>
           <CardContent className="space-y-5">
             <div>
-              <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">Candidate</p>
-              <div className="flex flex-wrap gap-2">
-                {(meetingCandidates || []).map((item) => (
+              <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">Platform</p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(["Microsoft Teams", "Google Meet"] as const).map((item) => (
                   <Button
-                    key={item.name}
-                    size="sm"
-                    variant={item.name === candidate.name ? "default" : "outline"}
-                    onClick={() => setCandidate(item)}
+                    key={item}
+                    variant={provider === item ? "default" : "outline"}
+                    className="h-20 justify-start"
+                    onClick={() => setProvider(item)}
                   >
-                    {item.name}
+                    <Video className="size-5" />
+                    <span className="text-left">
+                      <span className="block font-bold">{item}</span>
+                      <span className="text-xs opacity-75">
+                        {provider === item ? "Selected" : "Select platform"}
+                      </span>
+                    </span>
                   </Button>
                 ))}
               </div>
             </div>
-            <div>
-              <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">
-                Meeting link or room ID
-              </p>
+            <div className="space-y-2">
+              <Label htmlFor="room-url">Meeting URL or Room ID</Label>
               <Input
+                id="room-url"
                 value={roomUrl}
                 onChange={(event) => setRoomUrl(event.target.value)}
                 placeholder="https://teams.microsoft.com/l/meetup-join/…"
               />
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Button
-                variant="outline"
-                className="h-20 justify-start"
-                onClick={() => requestConnection("Microsoft Teams")}
-              >
-                <Video className="size-5 text-primary" />
-                <span className="text-left">
-                  <span className="block font-bold">Microsoft Teams</span>
-                  <span className="text-xs text-muted-foreground">Connect meeting</span>
-                </span>
-              </Button>
-              <Button
-                variant="outline"
-                className="h-20 justify-start"
-                onClick={() => requestConnection("Google Meet")}
-              >
-                <Video className="size-5 text-primary" />
-                <span className="text-left">
-                  <span className="block font-bold">Google Meet</span>
-                  <span className="text-xs text-muted-foreground">Connect meeting</span>
-                </span>
-              </Button>
+            <div className="space-y-2">
+              <Label>Select candidate from pipeline</Label>
+              <Select value={candidateName} onValueChange={setCandidateName}>
+                <SelectTrigger aria-label="Select candidate">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {meetingCandidates.map((item) => (
+                    <SelectItem key={item.name} value={item.name}>
+                      {item.name} · {item.role}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom candidate…</SelectItem>
+                </SelectContent>
+              </Select>
+              {candidateName === "custom" ? (
+                <Input
+                  value={customCandidate}
+                  onChange={(event) => setCustomCandidate(event.target.value)}
+                  placeholder="Candidate full name"
+                  aria-label="Custom candidate name"
+                />
+              ) : null}
             </div>
+            <label className="flex items-start justify-between gap-4 rounded-md border border-alert-border bg-alert p-4 text-sm text-alert-foreground">
+              <span>
+                Candidate has been notified and provided POPIA/GDPR consent for AI-assisted note
+                taking and evaluation.
+              </span>
+              <Switch
+                checked={consented}
+                onCheckedChange={(value) => setConsented(value === true)}
+                aria-label="Confirm candidate consent"
+              />
+            </label>
+            <Button disabled={!consented} onClick={startSession}>
+              <Video className="size-4" /> Connect & Launch Live Copilot
+            </Button>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-5 xl:grid-cols-[1.4fr_0.6fr]">
           <Card className="overflow-hidden shadow-sm">
-            <div className="flex min-h-80 items-center justify-center bg-brand-ink p-8 text-primary-foreground">
+            <div className="flex min-h-72 items-center justify-center bg-brand-ink p-8 text-primary-foreground">
               <div className="text-center">
                 <div className="mx-auto grid size-20 place-items-center rounded-full bg-primary text-2xl font-bold">
                   {candidate.name
@@ -766,41 +1126,54 @@ export function MeetingView({
                 </div>
                 <p className="mt-4 text-lg font-bold">{candidate.name}</p>
                 <p className="mt-1 text-sm opacity-75">
-                  {provider ?? "Microsoft Teams"} · {candidate.role}
+                  {provider} · {candidate.role} · {clock}
                 </p>
                 {roomUrl.trim() !== "" && (
                   <p className="mt-1 max-w-sm truncate text-xs opacity-60">{roomUrl}</p>
                 )}
                 <div className="mx-auto mt-6 flex w-fit items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold">
-                  <Circle className="size-2 fill-current" /> Live consent confirmed
+                  <Circle className="size-2 animate-pulse fill-current" /> Live consent confirmed
                 </div>
               </div>
             </div>
             <CardContent className="space-y-3 border-t p-4">
               <p className="text-xs font-bold uppercase text-muted-foreground">
-                Live transcript signal · turn {turn + 1}/{transcriptTurns.length}
+                Live transcript · turn {turn + 1}/{transcriptTurns.length}
               </p>
-              <p className="text-sm leading-6">“{currentTranscript}”</p>
+              <div className="max-h-52 space-y-3 overflow-y-auto rounded-md bg-surface-panel p-4">
+                {transcriptTurns.slice(0, turn + 1).map((entry) => (
+                  <div key={entry.interviewer}>
+                    <p className="text-sm leading-6">
+                      <span className="font-bold">Interviewer: </span>
+                      {entry.interviewer}
+                    </p>
+                    <p className="text-sm leading-6">
+                      <span className="font-bold">{candidate.name}: </span>
+                      {entry.candidate}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">Latest: “{current.candidate}”</p>
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() =>
-                    setTurn((value) => Math.min(transcriptTurns.length - 1, value + 1))
-                  }
+                  onClick={() => setTurn((value) => Math.min(transcriptTurns.length - 1, value + 1))}
                   disabled={turn >= transcriptTurns.length - 1}
                 >
-                  <RefreshCw /> Next transcript turn
+                  <RefreshCw /> Next Transcript Turn
                 </Button>
                 <Button
                   size="sm"
                   onClick={() => {
-                    const notes = transcriptTurns.slice(0, turn + 1).join("\n\n");
+                    const notes = transcriptText(turn);
                     onExportToScorecard?.({ name: candidate.name, role: candidate.role, notes });
+                    endSession();
                     toast.success(`${candidate.name} exported to Interview Scorecard`);
                   }}
                 >
-                  Export to scorecard
+                  End Meeting & Export Transcript to Scorecard
                 </Button>
               </div>
             </CardContent>
@@ -814,40 +1187,18 @@ export function MeetingView({
                 positive={item.positive === true}
               />
             ))}
+            <Card className="border-alert-border bg-alert shadow-sm">
+              <CardContent className="flex gap-3 p-4">
+                <AlertTriangle className="size-5 shrink-0 text-alert-foreground" />
+                <p className="text-xs leading-6 text-alert-foreground">
+                  AI guidance is decision support only. A human reviewer confirms every hiring
+                  outcome.
+                </p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
-
-      <Dialog open={consentOpen} onOpenChange={setConsentOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="size-5 text-alert-foreground" /> Consent & Transparency
-              Required
-            </DialogTitle>
-            <DialogDescription className="leading-6">
-              TalentFlow requires participant confirmation before initiating live transcription and
-              real-time behavioral guidance. Compliant with POPIA/GDPR.
-            </DialogDescription>
-          </DialogHeader>
-          <label className="flex items-start gap-3 rounded-md bg-alert p-4 text-sm text-alert-foreground">
-            <Checkbox
-              checked={consented}
-              onCheckedChange={(checked) => setConsented(checked === true)}
-            />{" "}
-            I confirm every participant has been informed and has consented to transcription and AI
-            assistance.
-          </label>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConsentOpen(false)}>
-              Cancel
-            </Button>
-            <Button disabled={!consented} onClick={startSession}>
-              Confirm & Connect
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </ViewFrame>
   );
 }

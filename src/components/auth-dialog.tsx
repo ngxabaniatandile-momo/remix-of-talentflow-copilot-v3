@@ -1,4 +1,4 @@
-import { Apple, ArrowLeft, Mail, Phone } from "lucide-react";
+import { Apple, ArrowLeft, Mail, Phone, UserPlus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Step = "root" | "phone" | "otp";
+type Step = "root" | "phone" | "otp" | "register";
 
 function GoogleIcon() {
   return (
@@ -38,15 +38,22 @@ function GoogleIcon() {
 export function AuthDialog({
   open,
   onOpenChange,
+  register = false,
   onAuthenticated,
+  onRegistered,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  register?: boolean;
   onAuthenticated: () => void;
+  onRegistered?: (input: { name: string; title: string; email: string }) => void;
 }) {
   const [step, setStep] = useState<Step>("root");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newTitle, setNewTitle] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [digits, setDigits] = useState(["", "", "", ""]);
   const [seconds, setSeconds] = useState(899);
   const [channel, setChannel] = useState("phone");
@@ -58,11 +65,18 @@ export function AuthDialog({
     return () => window.clearInterval(timer);
   }, [open, step]);
 
+  useEffect(() => {
+    if (open) setStep(register ? "register" : "root");
+  }, [open, register]);
+
   function reset() {
     setStep("root");
     setDigits(["", "", "", ""]);
     setPhone("");
     setEmail("");
+    setNewName("");
+    setNewTitle("");
+    setNewEmail("");
     setSeconds(899);
   }
 
@@ -106,6 +120,25 @@ export function AuthDialog({
     startOtp("email");
   }
 
+  function submitRegistration() {
+    if (!newName.trim()) {
+      toast.error("Enter your full name");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail.trim())) {
+      toast.error("Enter a valid work email");
+      return;
+    }
+    onRegistered?.({
+      name: newName.trim(),
+      title: newTitle.trim() || "Team Member",
+      email: newEmail.trim(),
+    });
+    onOpenChange(false);
+    reset();
+    toast.success(`Account created for ${newName.trim()}`);
+  }
+
   const time = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 
   return (
@@ -119,12 +152,18 @@ export function AuthDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader className="items-center text-center">
           <DialogTitle className="text-xl">
-            {step === "otp" ? "Enter your code" : "Log in or sign up"}
+            {step === "otp"
+              ? "Enter your code"
+              : step === "register"
+                ? "Register a new account"
+                : "Log in or sign up"}
           </DialogTitle>
           <DialogDescription className="text-center">
             {step === "otp"
               ? `We sent a 4-digit code to ${channel === "phone" ? phone || "your phone" : email || "your email"}.`
-              : "You'll get smarter responses and can upload files, candidate records, and more."}
+              : step === "register"
+                ? "Add a colleague or a second profile you can switch between."
+                : "You'll get smarter responses and can upload files, candidate records, and more."}
           </DialogDescription>
         </DialogHeader>
 
@@ -171,7 +210,52 @@ export function AuthDialog({
               <Button className="h-11 w-full rounded-full" onClick={submitEmail}>
                 Continue
               </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setStep("register")}>
+                <UserPlus className="size-4" /> Register a new account
+              </Button>
             </div>
+          </div>
+        )}
+
+        {step === "register" && (
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label htmlFor="register-name">Full name</Label>
+              <Input
+                id="register-name"
+                className="h-11"
+                value={newName}
+                onChange={(event) => setNewName(event.target.value)}
+                placeholder="Lebo Mahlangu"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="register-title">Job title</Label>
+              <Input
+                id="register-title"
+                className="h-11"
+                value={newTitle}
+                onChange={(event) => setNewTitle(event.target.value)}
+                placeholder="Hiring Manager"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="register-email">Work email</Label>
+              <Input
+                id="register-email"
+                className="h-11"
+                value={newEmail}
+                onChange={(event) => setNewEmail(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && submitRegistration()}
+                placeholder="lebo@acme.com"
+              />
+            </div>
+            <Button className="h-11 w-full rounded-full" onClick={submitRegistration}>
+              Create account
+            </Button>
+            <Button variant="ghost" className="w-full" onClick={() => setStep("root")}>
+              <ArrowLeft className="size-4" /> Back
+            </Button>
           </div>
         )}
 

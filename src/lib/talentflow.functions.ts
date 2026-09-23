@@ -113,3 +113,51 @@ export const generateCandidateEmail = createServerFn({ method: "POST" })
 
     return { markdown };
   });
+
+const CopilotInput = z.object({
+  question: z.string().trim().min(1, "Ask a question first"),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() }))
+    .max(20)
+    .default([]),
+  workspaceName: z.string().trim().default("this workspace"),
+  workspaceContext: z.string().trim().default(""),
+});
+
+const copilotSystemPrompt = `[ROLE]
+You are TalentFlow Copilot, a hybrid assistant inside an enterprise talent operations workspace.
+
+[BEHAVIOUR]
+1. General knowledge, science, maths, philosophy, definitions or casual conversation: answer accurately, directly and conversationally. Never force these into an HR or interview template.
+2. Greetings and small talk: reply naturally and briefly. Never echo the user's words back.
+3. HR, recruitment, role rubric, interview design, candidate evaluation or hiring policy questions: answer with structured, evidence-grounded guidance (short headings or bullets).
+4. Questions about the workspace's own candidates, scorecards, drafts or past sessions: answer strictly from the WORKSPACE CONTEXT block supplied in the user message. If the context does not contain the answer, say clearly that the workspace has no record of it. Never invent candidate data, scores or outcomes.
+5. Never reference gender, age, appearance, accent or other protected characteristics when assessing people.
+
+[STYLE]
+Concise Markdown. No preamble about being an AI. Keep answers under 250 words unless the user asks for more detail.`;
+
+export const askCopilot = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => CopilotInput.parse(input))
+  .handler(async ({ data }) => {
+    const transcript = (data.history || [])
+      .map((entry) => `${entry.role === "user" ? "User" : "Copilot"}: ${entry.content}`)
+      .join("\n");
+
+    const answer = await generateText({
+      system: copilotSystemPrompt,
+      effort: "low",
+      user: [
+        `WORKSPACE: ${data.workspaceName}`,
+        `WORKSPACE CONTEXT (candidates, scorecards, drafts and recent sessions saved in this workspace):\n${
+          data.workspaceContext || "[No saved workspace records yet]"
+        }`,
+        transcript ? `CONVERSATION SO FAR:\n${transcript}` : "",
+        `USER MESSAGE: ${data.question}`,
+      ]
+        .filter(Boolean)
+        .join("\n\n"),
+    });
+
+    return { answer };
+  });
