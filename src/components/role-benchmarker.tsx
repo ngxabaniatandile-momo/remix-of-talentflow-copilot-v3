@@ -143,8 +143,14 @@ function benchmarkToText(title: string, department: string, benchmark: Benchmark
 
 export function RoleBenchmarker({
   onSendToScorecard,
+  seedTitle = "",
+  seedDescription = "",
+  seedNonce = 0,
 }: {
   onSendToScorecard: (candidate: { name: string; role: string }) => void;
+  seedTitle?: string;
+  seedDescription?: string;
+  seedNonce?: number;
 }) {
   const [jobTitle, setJobTitle] = useState("");
   const [department, setDepartment] = useState("");
@@ -155,6 +161,14 @@ export function RoleBenchmarker({
   const [ingesting, setIngesting] = useState(false);
   const [ingestStep, setIngestStep] = useState(0);
   const [screened, setScreened] = useState<Applicant[]>([]);
+
+  // A library job description opened in this workspace pre-populates the intake form.
+  useEffect(() => {
+    if (!seedNonce) return;
+    if (seedTitle) setJobTitle(seedTitle);
+    if (seedDescription) setDescription(seedDescription);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedNonce]);
 
   const loadSample = () => {
     setJobTitle(sampleJob.title);
