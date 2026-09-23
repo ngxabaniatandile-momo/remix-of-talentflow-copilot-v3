@@ -12,7 +12,11 @@ export type Workspace = {
   members: number;
 };
 
-export type TeamMember = { name: string; role: "Admin" | "Reviewer" | "Interviewer"; email: string };
+export type TeamMember = {
+  name: string;
+  role: "Admin" | "Reviewer" | "Interviewer";
+  email: string;
+};
 
 export type ComplianceSettings = {
   piiRedaction: boolean;
@@ -87,12 +91,31 @@ export const workspaceTeams: Record<string, TeamMember[]> = {
 };
 
 export const accounts: WorkspaceUser[] = [
-  { id: "kelvin", name: "Kelvin", title: "Talent Lead", initials: "KT", email: "kelvin.talent@acme.com", admin: true },
-  { id: "priya", name: "Priya Patel", title: "Lead Tech Interviewer", initials: "PP", email: "priya@acme.com" },
+  {
+    id: "kelvin",
+    name: "Kelvin",
+    title: "Talent Lead",
+    initials: "KT",
+    email: "kelvin.talent@acme.com",
+    admin: true,
+  },
+  {
+    id: "priya",
+    name: "Priya Patel",
+    title: "Lead Tech Interviewer",
+    initials: "PP",
+    email: "priya@acme.com",
+  },
   { id: "sam", name: "Sam Brooks", title: "People Partner", initials: "SB", email: "sam@acme.com" },
 ];
 
-export const guestUser: WorkspaceUser = { id: "guest", name: "Guest", title: "Guest Mode", initials: "G", email: "" };
+export const guestUser: WorkspaceUser = {
+  id: "guest",
+  name: "Guest",
+  title: "Guest Mode",
+  initials: "G",
+  email: "",
+};
 
 export const defaultCompliance: ComplianceSettings = {
   piiRedaction: true,

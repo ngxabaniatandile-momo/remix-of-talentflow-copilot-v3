@@ -94,7 +94,9 @@ export function TalentFlowProvider({ children }: { children: ReactNode }) {
       setCompliance: (next) => setComplianceMap((current) => ({ ...current, [workspaceId]: next })),
       team: workspaceTeams[workspaceId] || [],
       authenticated,
-      activeUser: authenticated ? accounts.find((user) => user.id === activeUserId) || accounts[0]! : guestUser,
+      activeUser: authenticated
+        ? accounts.find((user) => user.id === activeUserId) || accounts[0]!
+        : guestUser,
       accounts,
       signIn: (userId = "kelvin") => {
         setActiveUserId(userId);
@@ -105,7 +107,15 @@ export function TalentFlowProvider({ children }: { children: ReactNode }) {
       history: historyMap[workspaceId] || [],
       logHistory,
     };
-  }, [workspaceList, workspaceId, complianceMap, authenticated, activeUserId, historyMap, logHistory]);
+  }, [
+    workspaceList,
+    workspaceId,
+    complianceMap,
+    authenticated,
+    activeUserId,
+    historyMap,
+    logHistory,
+  ]);
 
   return <TalentFlowContext.Provider value={value}>{children}</TalentFlowContext.Provider>;
 }
