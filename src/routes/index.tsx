@@ -193,7 +193,7 @@ function TalentFlowApp() {
             <TabsList className="h-auto w-full max-w-3xl flex-col gap-1 rounded-lg border border-border bg-card p-1 shadow-sm sm:grid sm:grid-cols-3">
               <TabsTrigger value="benchmark" className="w-full gap-2 py-2.5">
                 <Scale aria-hidden="true" className="size-4" />
-                Role Bench marker
+                Role Benchmarker
               </TabsTrigger>
               <TabsTrigger value="scorecard" className="w-full gap-2 py-2.5">
                 <FileText aria-hidden="true" className="size-4" />
