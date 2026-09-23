@@ -56,11 +56,11 @@ export type HistoryItem = {
   id: string;
   kind: HistoryKind;
   label: string;
-  status?: string;
+  status?: string | undefined;
   at: number;
   payload: Record<string, string>;
-  messages?: SessionMessage[];
-  channel?: string;
+  messages?: SessionMessage[] | undefined;
+  channel?: string | undefined;
 };
 
 export const DEFAULT_WORKSPACE_PIN = "849201";
