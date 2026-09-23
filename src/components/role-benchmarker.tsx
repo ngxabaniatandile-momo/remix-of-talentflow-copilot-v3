@@ -411,7 +411,7 @@ export function RoleBenchmarker({
                           onSendToScorecard({ name: applicant.name, role: applicant.role })
                         }
                       >
-                        Send to Tab 2 Scorecard
+                        Open in Interview Scorecard
                         <ArrowRight aria-hidden="true" className="size-4" />
                       </Button>
                     ) : null}
