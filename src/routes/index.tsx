@@ -9,10 +9,10 @@ import {
   Scale,
   ShieldCheck,
   Sparkles,
-  UserCheck,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { MarkdownView } from "@/components/markdown-view";
+import { RoleBenchmarker } from "@/components/role-benchmarker";
+
 import { generateCandidateEmail, generateScorecard } from "@/lib/talentflow.functions";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,24 +39,12 @@ import { Textarea } from "@/components/ui/textarea";
 type CandidateStatus = "Offer" | "Rejection" | "Next Stage";
 type MessageTone = "Empathetic" | "Direct" | "Executive";
 
-const roleSample = `Senior People Operations Partner
-
-Own workforce planning rhythms for a 600-person product organization. Partner with finance and hiring managers to benchmark role levels, identify compensation bands, and translate business needs into equitable role expectations. Lead quarterly calibration sessions, improve promotion documentation, and maintain consistent interview rubrics across distributed teams.`;
-
 const notesSample = `Avery described building a weekly hiring health dashboard after noticing recruiters were using three separate spreadsheets. They partnered with analytics to standardize funnel definitions, trained hiring managers on evidence-based debriefs, and reduced time-to-slate by 18% over two quarters.
 
 In the role-play, Avery asked clarifying questions before recommending process changes. They missed one edge case around regional approvals but quickly acknowledged it and proposed a compliance review step. Feedback style was calm, structured, and specific.`;
 
 const communicationSample = `Panel was impressed by Avery's structured thinking, evidence-based process improvements, and stakeholder management. Please mention the next conversation will focus on compensation strategy and change management with the VP of People.`;
 
-const competencyBank = [
-  "Role architecture and leveling clarity",
-  "Evidence-based decision making",
-  "Cross-functional stakeholder management",
-  "Operational process design",
-  "Equitable communication and calibration",
-  "Change management under ambiguity",
-];
 
 function errorMessage(error: unknown) {
   if (error instanceof Error && error.message) return error.message;
@@ -104,7 +94,15 @@ function TalentFlowApp() {
   const [emailMarkdown, setEmailMarkdown] = useState("");
   const [emailLoading, setEmailLoading] = useState(false);
 
-  const framework = useMemo(() => createFramework(jobDescription), [jobDescription]);
+  const [activeTab, setActiveTab] = useState("benchmark");
+
+  const handleSendToScorecard = (candidate: { name: string; role: string }) => {
+    setCandidateName(candidate.name);
+    setCandidateRole(candidate.role);
+    setActiveTab("scorecard");
+    toast.success(`${candidate.name} sent to Interview Scorecard`);
+  };
+
 
   const handleGenerateScorecard = async () => {
     setScorecardLoading(true);
@@ -190,12 +188,12 @@ function TalentFlowApp() {
           </div>
         </div>
 
-        <Tabs defaultValue="benchmark" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="mb-6 flex justify-center">
             <TabsList className="h-auto w-full max-w-3xl flex-col gap-1 rounded-lg border border-border bg-card p-1 shadow-sm sm:grid sm:grid-cols-3">
               <TabsTrigger value="benchmark" className="w-full gap-2 py-2.5">
                 <Scale aria-hidden="true" className="size-4" />
-                Role Bench marker
+                Role Benchmarker
               </TabsTrigger>
               <TabsTrigger value="scorecard" className="w-full gap-2 py-2.5">
                 <FileText aria-hidden="true" className="size-4" />
@@ -209,68 +207,9 @@ function TalentFlowApp() {
           </div>
 
           <TabsContent value="benchmark">
-            <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
-              <Card className="rounded-lg border-border bg-card shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
-                    <Scale aria-hidden="true" className="size-5 text-primary" /> Role benchmark input
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="job-description">Job Description</Label>
-                    <Textarea
-                      id="job-description"
-                      value={jobDescription}
-                      onChange={(event) => setJobDescription(event.target.value)}
-                      placeholder="Paste a job description or role brief."
-                      className="min-h-72 resize-none bg-surface-quiet"
-                    />
-                  </div>
-                  <Button type="button" variant="secondary" onClick={() => setJobDescription(roleSample)}>
-                    <Sparkles aria-hidden="true" className="size-4" /> Load Sample Data
-                  </Button>
-                </CardContent>
-              </Card>
-
-              <div className="space-y-5">
-                <OutputCard title="Competency Framework" icon={BrainCircuit} copyText={framework.copyText}>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {framework.competencies.map((item) => (
-                      <div key={item.title} className="rounded-lg border border-border bg-surface-quiet p-4">
-                        <div className="mb-2 flex items-center justify-between gap-3">
-                          <h3 className="font-semibold text-foreground">{item.title}</h3>
-                          <Badge variant="outline" className="border-border text-muted-foreground">
-                            {item.weight}
-                          </Badge>
-                        </div>
-                        <p className="text-sm leading-6 text-muted-foreground">{item.description}</p>
-                      </div>
-                    ))}
-                  </div>
-                </OutputCard>
-
-                <OutputCard title="3 Behavioral Questions" icon={UserCheck} copyText={framework.questions.join("\n")}>
-                  <ol className="space-y-3">
-                    {framework.questions.map((question, index) => (
-                      <li key={question} className="flex gap-3 rounded-lg bg-surface-panel p-4 text-sm leading-6">
-                        <span className="grid size-7 shrink-0 place-items-center rounded-md bg-primary text-xs font-bold text-primary-foreground">
-                          {index + 1}
-                        </span>
-                        <span>{question}</span>
-                      </li>
-                    ))}
-                  </ol>
-                </OutputCard>
-
-                <EthicalSafeguardCard
-                  checked={reviewed.benchmark}
-                  onCheckedChange={(checked) => setReview("benchmark", checked)}
-                  findings="Role criteria normalized to skills, evidence, and business outcomes. Protected-class language not detected."
-                />
-              </div>
-            </div>
+            <RoleBenchmarker onSendToScorecard={handleSendToScorecard} />
           </TabsContent>
+
 
           <TabsContent value="scorecard">
             <div className="grid gap-5 lg:grid-cols-[0.92fr_1.08fr]">
@@ -544,34 +483,6 @@ function EthicalSafeguardCard({
   );
 }
 
-function createFramework(jobDescription: string) {
-  const hasInput = jobDescription.trim().length > 0;
-  const selected = hasInput ? competencyBank.slice(0, 4) : competencyBank.slice(1, 5);
-  const competencies = selected.map((title, index) => ({
-    title,
-    weight: `${30 - index * 5}%`,
-    description: hasInput
-      ? `Assess for observable examples tied to ${title.toLowerCase()} in the submitted role scope.`
-      : `Ready to tailor this competency once a job description is added or sample data is loaded.`,
-  }));
-  const questions = [
-    "Tell me about a time you converted an ambiguous people-process problem into a clear operating rhythm. What evidence showed it worked?",
-    "Describe how you have handled calibration when stakeholders disagreed on role level, scope, or performance expectations.",
-    "Share an example of improving an HR workflow while protecting fairness, documentation quality, and candidate experience.",
-  ];
-
-  return {
-    competencies,
-    questions,
-    copyText: [
-      "Competency Framework",
-      ...competencies.map((item) => `${item.title} — ${item.weight}: ${item.description}`),
-      "",
-      "Behavioral Questions",
-      ...questions.map((question, index) => `${index + 1}. ${question}`),
-    ].join("\n"),
-  };
-}
 
 function GeneratedOutput({
   markdown,
