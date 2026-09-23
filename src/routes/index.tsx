@@ -9,10 +9,10 @@ import {
   Scale,
   ShieldCheck,
   Sparkles,
-  UserCheck,
   type LucideIcon,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
